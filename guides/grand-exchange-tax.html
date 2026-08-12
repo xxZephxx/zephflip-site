@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RS3 Grand Exchange Tax Explained &mdash; ZephFlip</title><meta name="description" content="How RuneScape 3's 2% Grand Exchange tax works, how it affects your flipping profit, and how to calculate your real margin after tax."><meta name="robots" content="index,follow">
+<link rel="canonical" href="https://zephflip.com/guides/grand-exchange-tax"><meta property="og:title" content="RS3 Grand Exchange Tax Explained"><meta property="og:description" content="How RuneScape 3's 2% Grand Exchange tax works, how it affects your flipping profit, and how to calculate your real margin after tax."><meta property="og:type" content="article"><meta property="og:url" content="https://zephflip.com/guides/grand-exchange-tax">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%AA%BD</text></svg>"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"RS3 Grand Exchange Tax Explained","about":"RuneScape 3 Grand Exchange flipping","author":{"@type":"Organization","name":"ZephFlip"},"publisher":{"@type":"Organization","name":"ZephFlip"}}</script>
+<style>
+  :root{--ground:#0d0916;--surface:#191225;--surface2:#1f1730;--line:#2c2340;--ink:#ece7f6;--muted:#a99dc4;--faint:#776b93;--amethyst:#b491ff;--amethyst-deep:#7c3aed;--gold:#e6c583;--profit:#63d79b;--loss:#f2726f;
+    --serif:"Hoefler Text","Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;}
+  @media (prefers-color-scheme:light){:root{--ground:#f4f1fb;--surface:#fff;--surface2:#f7f4fd;--line:#e3dcf1;--ink:#241a36;--muted:#5f5578;--faint:#8f85a6;--amethyst:#7c3aed;--amethyst-deep:#6d28d9;--gold:#b98d2f;}}
+  :root[data-theme="dark"]{--ground:#0d0916;--surface:#191225;--surface2:#1f1730;--line:#2c2340;--ink:#ece7f6;--muted:#a99dc4;--faint:#776b93;--amethyst:#b491ff;--amethyst-deep:#7c3aed;--gold:#e6c583;}
+  :root[data-theme="light"]{--ground:#f4f1fb;--surface:#fff;--surface2:#f7f4fd;--line:#e3dcf1;--ink:#241a36;--muted:#5f5578;--faint:#8f85a6;--amethyst:#7c3aed;--amethyst-deep:#6d28d9;--gold:#b98d2f;}
+  *{box-sizing:border-box;} body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.72;font-size:17px;-webkit-font-smoothing:antialiased;}
+  a{color:var(--amethyst);text-decoration:none;} a:hover{text-decoration:underline;}
+  .wrap{width:min(100% - 40px,700px);margin-inline:auto;}
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--ground) 85%,transparent);backdrop-filter:blur(12px);z-index:5;}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:15px 0;}
+  .brand{font-family:var(--serif);font-size:19px;color:var(--ink);} .back{font-size:14px;color:var(--muted);}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);}
+  h1{font-family:var(--serif);font-size:clamp(30px,5.2vw,44px);margin:8px 0 6px;line-height:1.1;letter-spacing:-.01em;text-wrap:balance;}
+  h2{font-family:var(--serif);font-size:25px;margin:40px 0 12px;letter-spacing:-.01em;}
+  h3{font-family:var(--serif);font-size:19px;margin:26px 0 8px;}
+  .meta{font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.03em;}
+  p,li{color:var(--muted);} strong{color:var(--ink);font-weight:600;} article p{margin:14px 0;}
+  ul,ol{padding-left:22px;} li{margin:7px 0;}
+  .lead{font-size:19px;color:var(--ink);margin:18px 0 6px;}
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface2);border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--gold);}
+  .callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amethyst);border-radius:10px;padding:14px 18px;margin:22px 0;font-size:15.5px;}
+  .callout b{color:var(--ink);}
+  .cta{background:var(--surface);border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));border-radius:14px;padding:24px;margin:44px 0 10px;text-align:center;}
+  .cta h3{font-size:22px;margin:0 0 8px;} .cta p{margin:0 0 16px;color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:12px 20px;border-radius:11px;background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 78%,#000));color:#241a05;}
+  .btn:hover{text-decoration:none;filter:brightness(1.05);}
+  .guide-card{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:16px 0;transition:border-color .2s,transform .2s;}
+  .guide-card:hover{border-color:color-mix(in srgb,var(--amethyst) 50%,var(--line));transform:translateY(-2px);text-decoration:none;}
+  .guide-card h2{font-size:22px;margin:0 0 6px;color:var(--ink);} .guide-card p{margin:0;color:var(--muted);font-size:15.5px;} .guide-card .meta{margin-top:10px;}
+  main{padding:40px 0 20px;}
+  footer{border-top:1px solid var(--line);margin-top:54px;padding:26px 0 46px;color:var(--faint);font-size:12.5px;line-height:1.6;} footer a{color:var(--muted);}
+</style></head><body>
+<header><div class="wrap bar"><a class="brand" href="/">ZephFlip</a><a class="back" href="/guides/">&larr; All guides</a></div></header>
+<main class="wrap"><span class="eyebrow">Mechanics</span>
+<h1>RS3 Grand Exchange Tax Explained</h1>
+<p class="meta">~4 min read</p>
+<p class="lead">RuneScape 3 takes a cut every time you sell on the Grand Exchange. If you flip, the GE tax quietly eats into every margin &mdash; so it pays to understand it.</p>
+<h2>What the tax is</h2>
+<p>When an item <strong>sells</strong> on the GE, a <strong>2% sales tax</strong> is deducted from the seller's proceeds. The buyer pays the full price; the seller receives 98% of it. It is charged per item, so a stack is taxed on the whole sale.</p>
+<div class="callout"><b>It hits the seller, not the buyer.</b> When you buy an item there is no tax &mdash; the tax only applies when you sell. That is why your <em>sell</em> side is where the margin gets thinner.</div>
+<h2>Why it matters for flipping</h2>
+<p>Your true profit on a flip is not just "sell minus buy." It is:</p>
+<p><code>net profit = (sell &minus; buy) &minus; (2% &times; sell)</code>, per item.</p>
+<p>On thin margins, that 2% can be the difference between a winning flip and a losing one.</p>
+<h2>A worked example</h2>
+<p>Say you buy an item for <strong>100,000,000</strong> and sell it for <strong>105,000,000</strong>:</p>
+<ul>
+<li>Raw spread: 5,000,000</li>
+<li>Tax on the sale: 2% &times; 105,000,000 = <strong>2,100,000</strong></li>
+<li><strong>Net profit: 2,900,000</strong></li>
+</ul>
+<p>So a "5m margin" is really about <strong>2.9m</strong> after tax &mdash; roughly a 2.9% return on the buy price. Always run the tax before deciding a flip is worth a slot.</p>
+<h2>Rules can change &mdash; verify in-game</h2>
+<p>Jagex has adjusted GE tax rules over time (including exemptions for some low-value items and changes to any caps). Treat the 2% as your planning rule of thumb, and confirm the exact figure the game shows you before you sell.</p>
+<h2>Let the math run itself</h2>
+<p><strong>ZephFlip</strong> calculates every margin, ROI, and profit figure <em>after</em> the 2% tax automatically &mdash; so the number you see is the number you keep. No mental math on every flip.</p><div class="cta"><h3>Let ZephFlip watch the market for you</h3><p>Crash &amp; spike alerts, "sale likely filled" pings, and profit leads &mdash; free to start.</p><a class="btn" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord &rarr;</a></div></main><footer><div class="wrap">Created using intellectual property belonging to Jagex Limited under the terms of Jagex’s Fan Content Policy. This content is not endorsed by or affiliated with Jagex. &middot; <a href="/">Home</a> &middot; <a href="/guides/">Guides</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="/privacy.html">Privacy</a></div></footer><script>(function(){var s;try{s=localStorage.getItem("zf-theme");}catch(e){}if(s)document.documentElement.setAttribute("data-theme",s);})();</script></body></html>
