@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="ZephFlip turns RuneScape 3's live Grand Exchange into signals — crash and spike alerts, sale-filled pings, and profit leads, delivered to your private Discord feed.">
+<meta property="og:title" content="ZephFlip — Grand Exchange intelligence for RuneScape merchants">
+<meta property="og:description" content="Crash and spike alerts, 'sale likely filled' pings, and profit leads for RS3 flippers. Trade with the gods.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0d0916">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%AA%BD</text></svg>">
+<title>ZephFlip — Grand Exchange intelligence for RuneScape merchants</title>
+<style>
+  :root {
+    --obsidian: #0d0916;
+    --obsidian-2: #120c1e;
+    --crypt: #191225;
+    --crypt-2: #1f1730;
+    --line: #2c2340;
+    --ink: #ece7f6;
+    --muted: #a99dc4;
+    --faint: #776b93;
+    --amethyst: #9a6bff;
+    --amethyst-bright: #b491ff;
+    --amethyst-deep: #7c3aed;
+    --gold: #e6c583;
+    --gold-deep: #c9a860;
+    --profit: #63d79b;
+    --loss: #f2726f;
+    --ground: var(--obsidian);
+    --ground-2: var(--obsidian-2);
+    --surface: var(--crypt);
+    --surface-2: var(--crypt-2);
+    --shadow: 0 24px 60px -30px rgba(0,0,0,.85);
+    --glow: 0 0 60px -12px rgba(154,107,255,.45);
+
+    --serif: "Hoefler Text","Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono: ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+
+    --edge: 14px;
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground: #f4f1fb; --ground-2: #eee9f7;
+      --surface: #ffffff; --surface-2: #f7f4fd;
+      --line: #e3dcf1;
+      --ink: #241a36; --muted: #5f5578; --faint: #8f85a6;
+      --amethyst: #7c3aed; --amethyst-bright: #6d28d9; --amethyst-deep: #6d28d9;
+      --gold: #b98d2f; --gold-deep: #a97e26;
+      --profit: #1f9d5f; --loss: #d64541;
+      --shadow: 0 22px 50px -32px rgba(59,32,102,.35);
+      --glow: 0 0 46px -16px rgba(124,58,237,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0d0916; --ground-2: #120c1e; --surface: #191225; --surface-2: #1f1730;
+    --line: #2c2340; --ink: #ece7f6; --muted: #a99dc4; --faint: #776b93;
+    --amethyst: #9a6bff; --amethyst-bright: #b491ff; --amethyst-deep: #7c3aed;
+    --gold: #e6c583; --gold-deep: #c9a860; --profit: #63d79b; --loss: #f2726f;
+    --shadow: 0 24px 60px -30px rgba(0,0,0,.85); --glow: 0 0 60px -12px rgba(154,107,255,.45);
+  }
+  :root[data-theme="light"] {
+    --ground: #f4f1fb; --ground-2: #eee9f7; --surface: #ffffff; --surface-2: #f7f4fd;
+    --line: #e3dcf1; --ink: #241a36; --muted: #5f5578; --faint: #8f85a6;
+    --amethyst: #7c3aed; --amethyst-bright: #6d28d9; --amethyst-deep: #6d28d9;
+    --gold: #b98d2f; --gold-deep: #a97e26; --profit: #1f9d5f; --loss: #d64541;
+    --shadow: 0 22px 50px -32px rgba(59,32,102,.35); --glow: 0 0 46px -16px rgba(124,58,237,.3);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--amethyst); outline-offset: 3px; border-radius: 4px; }
+
+  #wind { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .9; }
+  .shell { position: relative; z-index: 1; }
+  .wrap { width: min(100% - 44px, var(--maxw)); margin-inline: auto; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--gold); font-weight: 600;
+  }
+  h1,h2,h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; letter-spacing: -.01em; margin: 0; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---- nav ---- */
+  header.nav {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(14px);
+    background: color-mix(in srgb, var(--ground) 78%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-in { display: flex; align-items: center; gap: 22px; padding: 15px 0; }
+  .brand { display: flex; align-items: center; gap: 11px; font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: .01em; }
+  .sigil { width: 30px; height: 30px; flex: none; }
+  .nav-links { display: flex; gap: 26px; margin-left: auto; font-size: 14.5px; color: var(--muted); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { display: inline-flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--ink); border-color: var(--amethyst); }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    font-family: var(--sans); font-weight: 600; font-size: 15px; line-height: 1;
+    padding: 13px 20px; border-radius: 11px; cursor: pointer; border: 1px solid transparent;
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-gold { background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: #241a05; box-shadow: 0 10px 30px -12px rgba(230,197,131,.5); }
+  .btn-gold:hover { box-shadow: 0 14px 34px -12px rgba(230,197,131,.7); }
+  .btn-amethyst { background: var(--amethyst-deep); color: #fff; box-shadow: var(--glow); }
+  .btn-amethyst:hover { background: var(--amethyst); }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--amethyst); color: var(--amethyst-bright); }
+
+  /* ---- hero ---- */
+  .hero { padding: 70px 0 40px; }
+  .hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 54px; align-items: center; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .hero h1 { font-size: clamp(42px, 6.4vw, 76px); line-height: 1.03; margin: 18px 0 0; }
+  .hero h1 .lift { color: var(--amethyst-bright); font-style: italic; }
+  .hero p.lede { font-size: clamp(17px, 2.1vw, 20px); color: var(--muted); max-width: 34ch; margin: 22px 0 30px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; }
+  .assurances { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 26px; color: var(--faint); font-size: 13px; font-family: var(--mono); }
+  .assurances span::before { content: "✦"; color: var(--gold); margin-right: 8px; }
+
+  /* signal cards stack */
+  .signals { display: grid; gap: 14px; }
+  .signal {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--edge);
+    padding: 15px 17px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .signal::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .signal.crash::before { background: var(--loss); }
+  .signal.spike::before, .signal.fill::before { background: var(--profit); }
+  .signal .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .signal .name { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+  .signal .pct { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .signal.crash .pct { color: var(--loss); }
+  .signal.spike .pct { color: var(--profit); }
+  .signal .detail { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 6px; letter-spacing: .01em; }
+  .signal .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+  .signals-cap { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-top: 12px; }
+
+  /* ---- ticker ---- */
+  .ticker-band { border-block: 1px solid var(--line); background: var(--ground-2); margin-top: 46px; }
+  .ticker-head { text-align: center; padding: 12px 0 0; }
+  .ticker-mask { overflow: hidden; padding: 14px 0 18px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .ticker-track { display: inline-flex; gap: 34px; white-space: nowrap; will-change: transform; animation: marquee 46s linear infinite; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+  .tick { display: inline-flex; align-items: baseline; gap: 10px; font-family: var(--mono); font-size: 14px; }
+  .tick .t-name { color: var(--ink); }
+  .tick .t-price { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tick .t-roi { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tick .up { color: var(--profit); } .tick .down { color: var(--loss); }
+
+  /* ---- sections ---- */
+  section.band { padding: 88px 0; }
+  .sec-head { max-width: 60ch; margin-bottom: 46px; }
+  .sec-head h2 { font-size: clamp(30px, 4vw, 44px); margin-top: 14px; line-height: 1.1; }
+  .sec-head p { color: var(--muted); margin: 14px 0 0; font-size: 18px; }
+
+  /* features */
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .feat-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px) { .feat-grid { grid-template-columns: 1fr; } }
+  .feat {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--edge);
+    padding: 24px 22px; transition: border-color .2s ease, transform .2s ease;
+  }
+  .feat:hover { border-color: color-mix(in srgb, var(--amethyst) 55%, var(--line)); transform: translateY(-3px); }
+  .feat .glyph { width: 30px; height: 30px; color: var(--amethyst); margin-bottom: 16px; }
+  .feat h3 { font-size: 20px; }
+  .feat p { color: var(--muted); font-size: 15px; margin: 9px 0 0; line-height: 1.55; }
+  .feat .kbd { font-family: var(--mono); font-size: 12.5px; color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); padding: 2px 7px; border-radius: 6px; }
+
+  /* pantheon */
+  .pantheon { background: var(--ground-2); border-block: 1px solid var(--line); }
+  .tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: stretch; }
+  @media (max-width: 940px) { .tiers { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 540px) { .tiers { grid-template-columns: 1fr; } }
+  .tier {
+    display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; padding: 26px 22px; position: relative;
+  }
+  .tier.featured { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent), var(--shadow); }
+  .tier .badge { position: absolute; top: -11px; left: 22px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #241a05; background: var(--gold); padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+  .tier .god { font-family: var(--serif); font-size: 23px; display: flex; align-items: center; gap: 10px; }
+  .tier .god .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .tier .market { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-top: 5px; }
+  .tier .price { font-family: var(--mono); font-variant-numeric: tabular-nums; margin: 18px 0 4px; }
+  .tier .price b { font-size: 34px; color: var(--ink); font-weight: 600; }
+  .tier .price span { color: var(--faint); font-size: 14px; }
+  .tier ul { list-style: none; padding: 0; margin: 18px 0 24px; display: grid; gap: 10px; font-size: 14.5px; color: var(--muted); }
+  .tier li { display: flex; gap: 10px; align-items: flex-start; }
+  .tier li svg { flex: none; width: 16px; height: 16px; margin-top: 3px; color: var(--amethyst); }
+  .tier li b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tier .btn { margin-top: auto; width: 100%; }
+
+  /* how it works */
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; counter-reset: step; }
+  @media (max-width: 780px) { .steps { grid-template-columns: 1fr; } }
+  .step { position: relative; padding-top: 20px; }
+  .step .n { font-family: var(--mono); font-size: 13px; color: var(--gold); letter-spacing: .1em; }
+  .step h3 { font-size: 21px; margin: 10px 0 8px; }
+  .step p { color: var(--muted); font-size: 15.5px; margin: 0; }
+  .step::before { content: ""; display: block; width: 46px; height: 2px; background: linear-gradient(90deg, var(--amethyst), transparent); }
+
+  /* closing */
+  .closing { text-align: center; padding: 96px 0; }
+  .closing h2 { font-size: clamp(32px, 5vw, 52px); }
+  .closing p { color: var(--muted); font-size: 19px; max-width: 46ch; margin: 18px auto 32px; }
+  .closing .hero-cta { justify-content: center; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; color: var(--faint); font-size: 13.5px; }
+  .foot-in { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
+  .foot-links { display: flex; gap: 22px; }
+  .foot-links a:hover { color: var(--ink); }
+  .disclaimer { margin-top: 22px; font-size: 12px; line-height: 1.6; max-width: 70ch; color: var(--faint); }
+  mark { background: color-mix(in srgb, var(--amethyst) 22%, transparent); color: inherit; padding: 0 3px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+
+<canvas id="wind" aria-hidden="true"></canvas>
+
+<div class="shell">
+  <header class="nav">
+    <div class="wrap nav-in">
+      <a class="brand" href="#top">
+        <svg class="sigil" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="15" stroke="url(#g1)" stroke-width="1.4"/>
+          <path d="M6 20c5 0 6-8 10-8s5 8 10 8" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <path d="M6 13c5 0 6 5 10 5s5-5 10-5" stroke="var(--amethyst)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".8"/>
+          <defs><linearGradient id="g1" x1="0" y1="0" x2="32" y2="32"><stop stop-color="var(--amethyst)"/><stop offset="1" stop-color="var(--gold)"/></linearGradient></defs>
+        </svg>
+        ZephFlip
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Intelligence</a>
+        <a href="#pantheon">The Pantheon</a>
+        <a href="#how">How it works</a>
+      </nav>
+      <div class="nav-cta">
+        <button class="icon-btn" id="theme" aria-label="Toggle light and dark theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a class="btn btn-amethyst" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow">RuneScape 3 · Grand Exchange intelligence</span>
+          <h1>Flip the Grand Exchange<br>like the <span class="lift">gods do.</span></h1>
+          <p class="lede">ZephFlip turns RS3's live market into signals — crash &amp; spike alerts, "sale likely filled" pings, and profit leads — delivered to your own private feed in Discord.</p>
+          <div class="hero-cta">
+            <a class="btn btn-gold" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord →</a>
+            <a class="btn btn-ghost" href="#pantheon">See the pantheon</a>
+          </div>
+          <div class="assurances">
+            <span>Every figure after the 2% GE tax</span>
+            <span>Verify in-game, always</span>
+            <span>Never auto-trades</span>
+          </div>
+        </div>
+
+        <div class="signals" aria-label="Example alerts ZephFlip sends">
+          <div class="signal fill">
+            <div class="row1"><span class="name">💰 Ancient hilt</span><span class="tag">Sale likely filled</span></div>
+            <div class="detail">Your sell at <b>686,000,000</b> — market just traded at 688,738,602.</div>
+          </div>
+          <div class="signal crash">
+            <div class="row1"><span class="name">📉 Divine bowstring</span><span class="pct">−9.4%</span></div>
+            <div class="detail">Crash in ~12 min · now 498,506,006 gp (was 550m)</div>
+          </div>
+          <div class="signal spike">
+            <div class="row1"><span class="name">📈 Enchantment of heroism</span><span class="pct">+14.0%</span></div>
+            <div class="detail">Spike in ~8 min · 88.7% ROI on a fresh flip</div>
+          </div>
+          <div class="signals-cap">Example alerts · your private thread</div>
+        </div>
+      </div>
+
+      <!-- TICKER -->
+      <div class="ticker-band">
+        <div class="ticker-head"><span class="eyebrow">Grand Exchange · watched round the clock</span></div>
+        <div class="ticker-mask">
+          <div class="ticker-track" id="track"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="band" id="features">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">The intelligence</span>
+          <h2>Hermes reads the market so you don't have to.</h2>
+          <p>Every tool a merchant needs to buy low and sell high — watching prices, volume, and your own offers in real time.</p>
+        </div>
+        <div class="feat-grid">
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 5-8 4 5"/><path d="M3 21h18"/></svg>
+            <h3>Crash &amp; spike alerts</h3>
+            <p>The instant a watched item swings ~10%+, you're pinged — a crash to buy into, or a spike to sell. Toggle with <span class="kbd">$spikealerts on</span>.</p>
+          </div>
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            <h3>"Sale likely filled"</h3>
+            <p>Put an item on a GE slot and post your PB/PS. When the market crosses your price, ZephFlip tells you it likely went through — no more staring at the screen.</p>
+          </div>
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h5"/></svg>
+            <h3>Private live prices</h3>
+            <p>A personal feed for your watchlist and all eight GE slots — instant buy/sell, recent trades, and the numbers that matter, refreshed on your schedule.</p>
+          </div>
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18" opacity=".35"/><path d="M7 15l3-4 3 2 4-6"/></svg>
+            <h3>Profit leads</h3>
+            <p>A ranked feed of items clearing your tier's threshold — margin, ROI, and hourly volume, sorted so the best flips rise to the top of your market.</p>
+          </div>
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <h3>GE slot tracking</h3>
+            <p>Manage every account and all eight slots — buying, bought, selling — with buy-limit timers and a coach that flags the slots needing attention.</p>
+          </div>
+          <div class="feat">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>
+            <h3>ZephScore &amp; integrity</h3>
+            <p>A transparent trade score with its reasons shown — never a black box. Community price evidence is checked against the live market before anyone sees it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTHEON -->
+    <section class="band pantheon" id="pantheon">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Choose your market</span>
+          <h2>The pantheon.</h2>
+          <p>Start free with Apollo. When you're ready for private GE-slot tools and deeper community intelligence, ascend to the market that fits your flipping.</p>
+        </div>
+        <div class="tiers">
+          <div class="tier">
+            <div class="god"><span class="dot" style="background:var(--gold)"></span>Apollo</div>
+            <div class="market">Open Market · Free</div>
+            <div class="price"><b>Free</b></div>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Every RS3 Wiki price check</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Community trade evidence</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>The public budget list</li>
+            </ul>
+            <a class="btn btn-ghost" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Start free</a>
+          </div>
+
+          <div class="tier">
+            <div class="god"><span class="dot" style="background:#4aa8ff"></span>Poseidon</div>
+            <div class="market">Tidal Market</div>
+            <div class="price"><b>$3.99</b><span>/mo</span></div>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>1</b> RS3 account · <b>8</b> watched slots</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>25</b>-item watchlist</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Tidal profit leads &amp; alerts</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Private live prices every <b>2h</b></li>
+            </ul>
+            <a class="btn btn-ghost" href="https://upgrade.chat/1532448744258408579/p/6dd35766-a4b5-4090-92a0-ffe9cb2ac059">Choose Poseidon</a>
+          </div>
+
+          <div class="tier featured">
+            <span class="badge">Most chosen</span>
+            <div class="god"><span class="dot" style="background:var(--loss)"></span>Hades</div>
+            <div class="market">Stygian Market</div>
+            <div class="price"><b>$6.99</b><span>/mo</span></div>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Everything in Poseidon</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>2</b> accounts · <b>16</b> watched slots</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>50</b>-item watchlist</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Stygian intelligence · <b>1h/2h</b> updates</li>
+            </ul>
+            <a class="btn btn-gold" href="https://upgrade.chat/1532448744258408579/p/78c56f22-f8db-4582-8930-8405a4d2d8f3">Choose Hades</a>
+          </div>
+
+          <div class="tier">
+            <div class="god"><span class="dot" style="background:var(--amethyst)"></span>Zeus</div>
+            <div class="market">Olympian Market</div>
+            <div class="price"><b>$9.99</b><span>/mo</span></div>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Every market tier</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>Unlimited</b> accounts, slots &amp; watchlist</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Premium completed-flip feed</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Updates as fast as every <b>15 min</b></li>
+            </ul>
+            <a class="btn btn-ghost" href="https://upgrade.chat/1532448744258408579/p/3f9a695c-818c-4173-b96b-892cbf4feb0f">Choose Zeus</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="band" id="how">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="eyebrow">Three steps</span>
+          <h2>From guesswork to signals.</h2>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="n">STEP 01</div>
+            <h3>Join &amp; pick your market</h3>
+            <p>Hop into the Discord, start free on Apollo, and ascend whenever you want private tools.</p>
+          </div>
+          <div class="step">
+            <div class="n">STEP 02</div>
+            <h3>Watch your items &amp; slots</h3>
+            <p>Add items with <span class="kbd" style="font-family:var(--mono)">$watch</span> and drop your buys and sells onto GE slots.</p>
+          </div>
+          <div class="step">
+            <div class="n">STEP 03</div>
+            <h3>Get pinged to act</h3>
+            <p>ZephFlip messages your private thread the moment it's time to buy, sell, or collect a filled offer.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="closing" id="join">
+      <div class="wrap">
+        <span class="eyebrow">Trade with the gods</span>
+        <h2>The market never sleeps.<br>Neither does ZephFlip.</h2>
+        <p>Join the community, put your items under watch, and let the pantheon call your next move.</p>
+        <div class="hero-cta">
+          <a class="btn btn-gold" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord →</a>
+          <a class="btn btn-ghost" href="#pantheon">Compare the tiers</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-in">
+        <div class="brand" style="font-size:17px"><svg class="sigil" style="width:24px;height:24px" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="15" stroke="var(--amethyst)" stroke-width="1.4"/><path d="M6 20c5 0 6-8 10-8s5 8 10 8" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/></svg>ZephFlip</div>
+        <div class="foot-links">
+          <a href="#features">Intelligence</a>
+          <a href="#pantheon">Pantheon</a>
+          <a href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Discord</a>
+        </div>
+      </div>
+      <p class="disclaimer">ZephFlip is a community-made trading assistant for RuneScape 3 players. Prices shown are illustrative. RuneScape and the Grand Exchange are trademarks of Jagex Ltd; ZephFlip is a fan project and is not affiliated with, endorsed by, or sponsored by Jagex. Markets move — always verify a price in-game before you trade.</p>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // theme toggle
+  (function () {
+    var root = document.documentElement, btn = document.getElementById('theme');
+    var saved = null;
+    try { saved = localStorage.getItem('zf-theme'); } catch (e) {}
+    if (saved) root.setAttribute('data-theme', saved);
+    btn.addEventListener('click', function () {
+      var isDark = getComputedStyle(root).getPropertyValue('--ground').trim().indexOf('#0d09') === 0
+        || root.getAttribute('data-theme') === 'dark'
+        || (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+      var next = isDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('zf-theme', next); } catch (e) {}
+    });
+  })();
+
+  // ticker content
+  (function () {
+    var items = [
+      ['Ek-ZekKil', '2,160,000,000', '+2.9%', 'up'],
+      ['Bow of the Last Guardian', '1,569,894,994', '+1.9%', 'up'],
+      ['Ancient hilt', '686,738,602', '+4.6%', 'up'],
+      ['Dark Shard of Leng', '517,640,481', '-1.5%', 'down'],
+      ['Divine bowstring', '515,000,000', '-9.4%', 'down'],
+      ['Fractured Armadyl symbol', '400,000,000', '+2.2%', 'up'],
+      ['Elite sirenic chaps', '222,990,000', '+34.9%', 'up'],
+      ['Enchantment of heroism', '75,895,000', '+88.7%', 'up'],
+      ['Holly wreath', '18,990,000,000', '+4.6%', 'up'],
+      ['Vestments of havoc robe bottom', '317,000,000', '-3.1%', 'down']
+    ];
+    function tick(it) {
+      return '<span class="tick"><span class="t-name">' + it[0] + '</span>'
+        + '<span class="t-price num">' + it[1] + '</span>'
+        + '<span class="t-roi ' + it[3] + '">' + it[2] + '</span></span>';
+    }
+    var one = items.map(tick).join('');
+    document.getElementById('track').innerHTML = one + one; // duplicate for seamless loop
+  })();
+
+  // ambient west wind
+  (function () {
+    var c = document.getElementById('wind');
+    if (!c) return;
+    var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var ctx = c.getContext('2d'), W, H, dpr, streaks = [];
+    function accent() {
+      var v = getComputedStyle(document.documentElement).getPropertyValue('--amethyst').trim();
+      return v || '#9a6bff';
+    }
+    function resize() {
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      W = c.width = innerWidth * dpr; H = c.height = innerHeight * dpr;
+      c.style.width = innerWidth + 'px'; c.style.height = innerHeight + 'px';
+    }
+    function seed() {
+      streaks = [];
+      var n = Math.round(innerWidth / 34);
+      for (var i = 0; i < n; i++) {
+        streaks.push({
+          x: Math.random() * W, y: Math.random() * H * 0.85,
+          len: (60 + Math.random() * 200) * dpr,
+          sp: (0.15 + Math.random() * 0.5) * dpr,
+          a: 0.03 + Math.random() * 0.09,
+          amp: (4 + Math.random() * 14) * dpr,
+          ph: Math.random() * 6.28
+        });
+      }
+    }
+    function frame(t) {
+      ctx.clearRect(0, 0, W, H);
+      var col = accent();
+      for (var i = 0; i < streaks.length; i++) {
+        var s = streaks[i];
+        s.x += s.sp; s.ph += 0.01;
+        if (s.x - s.len > W) { s.x = -s.len; s.y = Math.random() * H * 0.85; }
+        var y = s.y + Math.sin(s.ph) * s.amp;
+        var grad = ctx.createLinearGradient(s.x - s.len, y, s.x, y);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, col);
+        ctx.strokeStyle = grad; ctx.globalAlpha = s.a; ctx.lineWidth = dpr;
+        ctx.beginPath(); ctx.moveTo(s.x - s.len, y); ctx.lineTo(s.x, y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (!reduce) requestAnimationFrame(frame);
+    }
+    resize(); seed();
+    if (reduce) { frame(0); } else { requestAnimationFrame(frame); }
+    addEventListener('resize', function () { resize(); seed(); });
+  })();
+</script>
+
+</body>
+</html>
