@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://zephflip.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://zephflip.com/guides/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://zephflip.com/guides/how-to-flip-rs3</loc><priority>0.7</priority></url>
-  <url><loc>https://zephflip.com/guides/grand-exchange-tax</loc><priority>0.7</priority></url>
-  <url><loc>https://zephflip.com/guides/best-items-to-flip</loc><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/</loc><lastmod>2026-08-12</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://zephflip.com/guides/</loc><lastmod>2026-08-12</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://zephflip.com/guides/how-to-flip-rs3</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/grand-exchange-tax</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/best-items-to-flip</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/how-to-spot-a-price-crash</loc><lastmod>2026-08-12</lastmod><priority>0.7</priority></url>
   <url><loc>https://zephflip.com/terms.html</loc><priority>0.3</priority></url>
   <url><loc>https://zephflip.com/privacy.html</loc><priority>0.3</priority></url>
 </urlset>

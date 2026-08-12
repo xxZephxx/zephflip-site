@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Spot a Price Crash in RS3 (and Profit From It) &mdash; ZephFlip</title><meta name="description" content="How to tell a temporary dip from a falling knife in RuneScape 3 — why prices crash, how to buy a crash safely, and how to profit instead of getting caught in one."><meta name="robots" content="index,follow">
+<link rel="canonical" href="https://zephflip.com/guides/how-to-spot-a-price-crash"><meta property="og:title" content="How to Spot a Price Crash in RS3 (and Profit From It)"><meta property="og:description" content="How to tell a temporary dip from a falling knife in RuneScape 3 — why prices crash, how to buy a crash safely, and how to profit instead of getting caught in one."><meta property="og:type" content="article"><meta property="og:url" content="https://zephflip.com/guides/how-to-spot-a-price-crash">
+<link rel="icon" href="/favicon.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to Spot a Price Crash in RS3 (and Profit From It)","about":"RuneScape 3 Grand Exchange flipping","author":{"@type":"Organization","name":"ZephFlip"},"publisher":{"@type":"Organization","name":"ZephFlip"}}</script>
+<style>
+  :root{--ground:#0d0916;--surface:#191225;--surface2:#1f1730;--line:#2c2340;--ink:#ece7f6;--muted:#a99dc4;--faint:#776b93;--amethyst:#b491ff;--amethyst-deep:#7c3aed;--gold:#e6c583;--profit:#63d79b;--loss:#f2726f;
+    --serif:"Hoefler Text","Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;}
+  @media (prefers-color-scheme:light){:root{--ground:#f4f1fb;--surface:#fff;--surface2:#f7f4fd;--line:#e3dcf1;--ink:#241a36;--muted:#5f5578;--faint:#8f85a6;--amethyst:#7c3aed;--amethyst-deep:#6d28d9;--gold:#b98d2f;}}
+  :root[data-theme="dark"]{--ground:#0d0916;--surface:#191225;--surface2:#1f1730;--line:#2c2340;--ink:#ece7f6;--muted:#a99dc4;--faint:#776b93;--amethyst:#b491ff;--amethyst-deep:#7c3aed;--gold:#e6c583;}
+  :root[data-theme="light"]{--ground:#f4f1fb;--surface:#fff;--surface2:#f7f4fd;--line:#e3dcf1;--ink:#241a36;--muted:#5f5578;--faint:#8f85a6;--amethyst:#7c3aed;--amethyst-deep:#6d28d9;--gold:#b98d2f;}
+  *{box-sizing:border-box;} body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.72;font-size:17px;-webkit-font-smoothing:antialiased;}
+  a{color:var(--amethyst);text-decoration:none;} a:hover{text-decoration:underline;}
+  .wrap{width:min(100% - 40px,700px);margin-inline:auto;}
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--ground) 85%,transparent);backdrop-filter:blur(12px);z-index:5;}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:15px 0;}
+  .brand{font-family:var(--serif);font-size:19px;color:var(--ink);} .back{font-size:14px;color:var(--muted);}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);}
+  h1{font-family:var(--serif);font-size:clamp(30px,5.2vw,44px);margin:8px 0 6px;line-height:1.1;letter-spacing:-.01em;text-wrap:balance;}
+  h2{font-family:var(--serif);font-size:25px;margin:40px 0 12px;letter-spacing:-.01em;}
+  h3{font-family:var(--serif);font-size:19px;margin:26px 0 8px;}
+  .meta{font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.03em;}
+  p,li{color:var(--muted);} strong{color:var(--ink);font-weight:600;} article p{margin:14px 0;}
+  ul,ol{padding-left:22px;} li{margin:7px 0;}
+  .lead{font-size:19px;color:var(--ink);margin:18px 0 6px;}
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface2);border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--gold);}
+  .callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amethyst);border-radius:10px;padding:14px 18px;margin:22px 0;font-size:15.5px;}
+  .callout b{color:var(--ink);}
+  .cta{background:var(--surface);border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));border-radius:14px;padding:24px;margin:44px 0 10px;text-align:center;}
+  .cta h3{font-size:22px;margin:0 0 8px;} .cta p{margin:0 0 16px;color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:12px 20px;border-radius:11px;background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 78%,#000));color:#241a05;}
+  .btn:hover{text-decoration:none;filter:brightness(1.05);}
+  .guide-card{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:16px 0;transition:border-color .2s,transform .2s;}
+  .guide-card:hover{border-color:color-mix(in srgb,var(--amethyst) 50%,var(--line));transform:translateY(-2px);text-decoration:none;}
+  .guide-card h2{font-size:22px;margin:0 0 6px;color:var(--ink);} .guide-card p{margin:0;color:var(--muted);font-size:15.5px;} .guide-card .meta{margin-top:10px;}
+  main{padding:40px 0 20px;}
+  footer{border-top:1px solid var(--line);margin-top:54px;padding:26px 0 46px;color:var(--faint);font-size:12.5px;line-height:1.6;} footer a{color:var(--muted);}
+</style></head><body>
+<header><div class="wrap bar"><a class="brand" href="/">ZephFlip</a><a class="back" href="/guides/">&larr; All guides</a></div></header>
+<main class="wrap"><span class="eyebrow">Strategy</span>
+<h1>How to Spot a Price Crash in RS3 (and Profit From It)</h1>
+<p class="meta">~5 min read</p>
+<p class="lead">A price crash looks scary on the graph &mdash; but for a flipper, a crash is often where the biggest margins are born. The trick is telling a temporary dip from a falling knife.</p>
+<h2>What a crash actually is</h2>
+<p>A crash is a sharp, fast drop in an item's Grand Exchange price &mdash; the instant-buy and instant-sell prices both fall quickly as sellers undercut each other. Some crashes recover within hours; others are the start of a long slide to a new, lower normal.</p>
+<h2>Why prices crash</h2>
+<ul>
+<li><strong>Game updates &amp; nerfs</strong> &mdash; a weapon gets nerfed, a boss drop becomes more common, or new content makes an item less useful. Demand drops, price follows.</li>
+<li><strong>Supply floods</strong> &mdash; Double XP and popular training methods dump huge quantities of bars, herbs, or logs onto the market.</li>
+<li><strong>Hype fading</strong> &mdash; an item that spiked on excitement drifts back down once the excitement passes.</li>
+<li><strong>Manipulation unwinding</strong> &mdash; a price pushed up artificially collapses when the people holding it finally sell.</li>
+</ul>
+<h2>The opportunity: buy the dip, sell the recovery</h2>
+<p>When a crash is <em>temporary</em> &mdash; driven by a short-term supply spike or panic selling rather than a permanent loss of demand &mdash; the price usually rebounds. Buy near the bottom, sell on the recovery, and the margin can dwarf a normal flip.</p>
+<div class="callout"><b>The danger: catching a falling knife.</b> If the crash is driven by a permanent drop in demand (a nerf, an item made obsolete), there is no rebound &mdash; you just bought something on its way down. Knowing <em>why</em> it is crashing is everything.</div>
+<h2>Dip or death spiral? How to tell</h2>
+<ol>
+<li><strong>Check the news.</strong> Was there a recent update, nerf, or new item that affects this one? A crash with a fundamental cause behind it is far less likely to bounce.</li>
+<li><strong>Look at volume.</strong> Heavy selling into an otherwise healthy market often exhausts itself and recovers. A steady bleed on thin volume is harder to trust.</li>
+<li><strong>Find the support level.</strong> Check the price history &mdash; has the item bounced off a similar low before? Old floors often hold again.</li>
+<li><strong>Ask if demand still exists.</strong> If people still need the item for PvM, skilling, or current content, the crash is more likely a discount than a death.</li>
+</ol>
+<h2>Buying a crash, step by step</h2>
+<ol>
+<li>Wait for the fall to <strong>slow down</strong> &mdash; do not try to catch the exact bottom while it is still dropping fast.</li>
+<li>Place a <strong>buy offer</strong> near the new low, not at the old pre-crash price.</li>
+<li>Only commit gold you can afford to have <strong>tied up</strong> if the recovery is slow &mdash; or never comes.</li>
+<li>Set your <strong>sell offer</strong> below the level the item held before the crash, so you are first in line on the way back up.</li>
+<li>Work the <a href="/guides/grand-exchange-tax">2% GE tax</a> into your target price before you decide it is worth it.</li>
+</ol>
+<h2>Manage the risk</h2>
+<p>Never dump your whole bank into one crashing item &mdash; you are making a bet, and bets fail. Spread across a few plays, size each position so a bad call does not hurt, and always <strong>verify the live price in-game</strong> before you buy; market data can lag exactly when things are moving fastest.</p>
+<h2>Never miss a crash again</h2>
+<p>The hardest part is <em>catching</em> the crash while it is happening &mdash; you cannot stare at the GE all day. <strong>ZephFlip</strong> watches your items and DMs you the moment one crashes into buy range (or spikes into sell range), so you can act while the opportunity is still open.</p><div class="cta"><h3>Let ZephFlip watch the market for you</h3><p>Crash &amp; spike alerts, "sale likely filled" pings, and profit leads &mdash; free to start.</p><a class="btn" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord &rarr;</a></div></main><footer><div class="wrap">Created using intellectual property belonging to Jagex Limited under the terms of Jagex’s Fan Content Policy. This content is not endorsed by or affiliated with Jagex. &middot; <a href="/">Home</a> &middot; <a href="/guides/">Guides</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="/privacy.html">Privacy</a></div></footer><script>(function(){var s;try{s=localStorage.getItem("zf-theme");}catch(e){}if(s)document.documentElement.setAttribute("data-theme",s);})();</script></body></html>
