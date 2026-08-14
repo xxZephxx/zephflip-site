@@ -51,6 +51,8 @@
   .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none;}
   .dot.ok{background:var(--profit);} .dot.err{background:var(--loss);}
   .rlink{background:none;border:none;color:var(--amethyst);cursor:pointer;font-size:11.5px;padding:0;}
+  #a1status{font-size:11px;color:var(--faint);padding:5px 11px;border-bottom:1px solid var(--line);background:#120c1e;display:none;}
+  #a1status b{color:var(--profit);} #a1status.warn b{color:var(--gold);}
   #setup{padding:16px;display:none;flex-direction:column;gap:12px;overflow-y:auto;height:100vh;}
   #setup h1{font-size:16px;margin:0;display:flex;align-items:center;gap:8px;}
   #setup h1 img{width:24px;height:24px;}
@@ -94,6 +96,7 @@
     <span class="name">ZephFlip</span>
     <span class="gear" id="gear" title="Settings">⚙</span>
   </header>
+  <div id="a1status"></div>
   <main>
     <div class="section-title">Live alerts</div>
     <div id="alerts"><div class="quiet">Watching your list…</div></div>
@@ -230,6 +233,21 @@
     });
   }
 
+  function initAlt1(){
+    if(!window.alt1) return;
+    var el=$("#a1status"); el.style.display="block";
+    function upd(){
+      if(!window.alt1) return;
+      var px=alt1.permissionPixel;
+      el.className=px?"":"warn";
+      el.innerHTML="Alt1 · RS "+alt1.rsWidth+"×"+alt1.rsHeight+" · pixel "+
+        (px?"<b>ready</b> — screen reading coming next"
+           :"<b>needs permission</b> (Alt1 → this app → Permissions → allow pixel)");
+    }
+    upd(); setInterval(upd,5000);
+  }
+
+  initAlt1();
   if(configured()) showApp(); else showSetup(false);
 })();
 </script>
