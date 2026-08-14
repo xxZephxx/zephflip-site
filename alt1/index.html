@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZephFlip — Alt1</title>
+<link rel="icon" href="/favicon.png">
+<style>
+  :root{
+    --ground:#0d0916; --panel:#160f24; --panel-2:#1d1531; --line:#2c2340;
+    --ink:#ece7f6; --muted:#a99dc4; --faint:#776b93;
+    --amethyst:#b491ff; --gold:#e6c583;
+    --buying:#e6c583; --bought:#7aa7ff; --selling:#b491ff;
+    --ok:#63d79b; --err:#f2726f;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--ground); color:var(--ink); font-family:var(--sans);
+    font-size:13.5px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;flex-direction:column;height:100vh;}
+  header{
+    display:flex;align-items:center;gap:8px;padding:9px 11px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel),transparent);
+  }
+  header img{width:22px;height:22px;flex:none;}
+  header .name{font-weight:700;letter-spacing:.02em;}
+  header .who{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right;line-height:1.2;}
+  header .who .rank{color:var(--gold);font-weight:700;font-family:var(--mono);}
+  .gear{cursor:pointer;color:var(--faint);font-size:14px;padding:2px 4px;user-select:none;}
+  .gear:hover{color:var(--ink);}
+  main{flex:1;overflow-y:auto;padding:8px;}
+  .section-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint);margin:4px 2px 6px;}
+  .slot{
+    display:flex;align-items:center;gap:8px;padding:7px 9px;margin:5px 0;
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  }
+  .slot.empty{opacity:.4;}
+  .slot .num{font-family:var(--mono);font-size:11px;color:var(--faint);
+    min-width:20px;text-align:center;}
+  .slot .item{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .slot .item.none{font-weight:400;color:var(--faint);}
+  .stage{font-size:10.5px;font-weight:700;font-family:var(--mono);
+    text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:20px;}
+  .stage.buying{color:var(--buying);background:color-mix(in srgb,var(--buying) 16%,transparent);}
+  .stage.bought{color:var(--bought);background:color-mix(in srgb,var(--bought) 16%,transparent);}
+  .stage.selling{color:var(--selling);background:color-mix(in srgb,var(--selling) 16%,transparent);}
+  .acct{font-family:var(--mono);font-size:10px;color:var(--faint);margin:10px 2px 2px;}
+  footer{
+    display:flex;align-items:center;gap:8px;padding:7px 10px;
+    border-top:1px solid var(--line);font-size:11px;color:var(--muted);
+  }
+  #status{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #status.ok{color:var(--muted);} #status.err{color:var(--err);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none;}
+  .dot.ok{background:var(--ok);} .dot.err{background:var(--err);}
+  button.link{background:none;border:none;color:var(--amethyst);cursor:pointer;font-size:11px;padding:0;}
+  /* setup screen */
+  #setup{padding:16px;display:none;flex-direction:column;gap:12px;overflow-y:auto;height:100vh;}
+  #setup h1{font-size:16px;margin:0;display:flex;align-items:center;gap:8px;}
+  #setup h1 img{width:24px;height:24px;}
+  #setup p{margin:0;color:var(--muted);font-size:12.5px;}
+  label{display:block;font-size:11px;color:var(--faint);text-transform:uppercase;
+    letter-spacing:.08em;margin-bottom:4px;}
+  input{
+    width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:9px 10px;font-family:var(--mono);font-size:12px;
+  }
+  input:focus{outline:none;border-color:var(--amethyst);}
+  .btn{
+    background:linear-gradient(180deg,var(--gold),#c9a85f);color:#241a05;font-weight:700;
+    border:none;border-radius:9px;padding:10px;cursor:pointer;font-size:13px;width:100%;
+  }
+  .btn:hover{filter:brightness(1.05);}
+  .btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);}
+  .hint{font-size:11px;color:var(--faint);}
+  .addalt1{text-align:center;font-size:11.5px;}
+  a{color:var(--amethyst);}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1><img src="/favicon.png" alt="">ZephFlip · Alt1</h1>
+  <p>Connect this app to your ZephFlip account to see your GE slots and leaderboard rank live in‑game.</p>
+  <div>
+    <label>API endpoint</label>
+    <input id="in-base" placeholder="https://your-zephflip.up.railway.app" autocomplete="off" spellcheck="false">
+    <p class="hint">The URL from <code>$link</code> in Discord.</p>
+  </div>
+  <div>
+    <label>Link token</label>
+    <input id="in-token" placeholder="paste your $link token" autocomplete="off" spellcheck="false">
+    <p class="hint">Run <b>$link</b> in the ZephFlip Discord — it DMs you a private token. Keep it secret.</p>
+  </div>
+  <button class="btn" id="save">Connect</button>
+  <button class="btn ghost" id="cancel" style="display:none">Cancel</button>
+  <p class="addalt1">Not in Alt1 yet? <a id="addalt1" href="#">➕ Add ZephFlip to Alt1</a></p>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <img src="/favicon.png" alt="">
+    <span class="name">ZephFlip</span>
+    <span class="who" id="who"></span>
+    <span class="gear" id="gear" title="Settings">⚙</span>
+  </header>
+  <main id="main"></main>
+  <footer>
+    <span class="dot" id="dot"></span>
+    <span id="status">Connecting…</span>
+    <button class="link" id="refresh">Refresh</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // Register with Alt1 if we're running inside it (harmless no-op in a browser).
+  try { if (window.alt1) alt1.identifyAppUrl("./appconfig.json"); } catch (e) {}
+
+  var LS = { base:"zf_api_base", token:"zf_api_token" };
+  var $ = function(s){ return document.querySelector(s); };
+  var timer = null;
+
+  var ADDALT1 = "alt1://addapp/https://zephflip.com/alt1/appconfig.json";
+  $("#addalt1").setAttribute("href", ADDALT1);
+
+  function cfg(){
+    return {
+      base: (localStorage.getItem(LS.base) || "").replace(/\/+$/, ""),
+      token: localStorage.getItem(LS.token) || ""
+    };
+  }
+  function configured(){ var c = cfg(); return c.base && c.token; }
+
+  function showSetup(isEdit){
+    clearInterval(timer);
+    var c = cfg();
+    $("#in-base").value = c.base;
+    $("#in-token").value = c.token;
+    $("#cancel").style.display = isEdit ? "block" : "none";
+    $("#app").style.display = "none";
+    $("#setup").style.display = "flex";
+  }
+  function showApp(){
+    $("#setup").style.display = "none";
+    $("#app").style.display = "flex";
+    refresh();
+    clearInterval(timer);
+    timer = setInterval(refresh, 20000);
+  }
+
+  $("#save").onclick = function(){
+    var base = $("#in-base").value.trim().replace(/\/+$/, "");
+    var token = $("#in-token").value.trim();
+    if (!base || !token){ return; }
+    if (!/^https?:\/\//.test(base)) base = "https://" + base;
+    localStorage.setItem(LS.base, base);
+    localStorage.setItem(LS.token, token);
+    showApp();
+  };
+  $("#cancel").onclick = function(){ if (configured()) showApp(); };
+  $("#gear").onclick = function(){ showSetup(true); };
+  $("#refresh").onclick = refresh;
+
+  function api(path){
+    var c = cfg();
+    return fetch(c.base + path, { headers: { "Authorization": "Bearer " + c.token } })
+      .then(function(r){
+        if (r.status === 401) throw new Error("Invalid token — re-run $link");
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      });
+  }
+
+  function setStatus(text, kind){
+    var s = $("#status"), d = $("#dot");
+    s.textContent = text; s.className = kind || "";
+    d.className = "dot " + (kind || "");
+  }
+
+  var STAGES = { buying:"Buying", bought:"Bought", selling:"Selling" };
+
+  function renderMain(me, slots, rank){
+    // header identity + rank
+    var who = "";
+    if (me && me.name) who += "<div>" + escapeHtml(me.name) + "</div>";
+    if (rank && rank.rank) {
+      who += '<div class="rank">#' + rank.rank.rank + " · " + gp(rank.rank.net_profit) + "</div>";
+    } else {
+      who += '<div class="rank" style="color:var(--faint)">Unranked</div>';
+    }
+    $("#who").innerHTML = who;
+
+    // slots grouped by account, occupied first
+    var list = (slots && slots.slots) || [];
+    var occupied = list.filter(function(s){ return s.item; });
+    var html = '<div class="section-title">GE Slots · ' + occupied.length + " active</div>";
+    var lastAcct = null;
+    var multi = (slots.accounts || 1) > 1;
+    list.forEach(function(s){
+      if (multi && s.account !== lastAcct){ html += '<div class="acct">' + escapeHtml(s.account) + "</div>"; lastAcct = s.account; }
+      if (s.item){
+        html += '<div class="slot"><span class="num">' + s.slot + '</span>' +
+          '<span class="item">' + escapeHtml(s.item) + "</span>" +
+          '<span class="stage ' + s.stage + '">' + (STAGES[s.stage] || s.stage) + "</span></div>";
+      } else {
+        html += '<div class="slot empty"><span class="num">' + s.slot + '</span>' +
+          '<span class="item none">Empty</span></div>';
+      }
+    });
+    if (!list.length) html += '<div class="hint" style="padding:10px 2px">No accounts yet. Add one with <b>$accounts</b> in Discord.</div>';
+    $("#main").innerHTML = html;
+  }
+
+  function refresh(){
+    setStatus("Refreshing…");
+    Promise.all([api("/api/me"), api("/api/slots"), api("/api/rank")])
+      .then(function(r){
+        renderMain(r[0], r[1], r[2]);
+        setStatus("Updated " + new Date().toLocaleTimeString(), "ok");
+      })
+      .catch(function(e){ setStatus(e.message || "Connection failed", "err"); });
+  }
+
+  function gp(n){
+    if (n == null) return "—";
+    if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.?0+$/,"") + "b";
+    if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,"") + "m";
+    if (n >= 1e3) return (n/1e3).toFixed(0) + "k";
+    return "" + n;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // boot
+  if (configured()) showApp(); else showSetup(false);
+})();
+</script>
+</body>
+</html>
