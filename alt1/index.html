@@ -148,6 +148,7 @@
     <div id="reader">
       <div class="section-title" style="margin-top:12px">Auto-detect (beta)</div>
       <button id="probe">🔎 Read item (3s to hover the item name)</button>
+      <img id="a1shot" alt="" style="display:none;width:100%;margin-top:8px;border:1px solid var(--line);border-radius:8px;image-rendering:pixelated;">
       <pre id="a1debug"></pre>
     </div>
   </main>
@@ -330,7 +331,7 @@
     if(readerLoading) return readerLoading;
     readerLoading=new Promise(function(resolve,reject){
       var s=document.createElement("script");
-      s.src="/alt1/lib/reader.js?v=5";
+      s.src="/alt1/lib/reader.js?v=6";
       s.onload=function(){ window.ZephReader?resolve():reject(new Error("reader loaded but ZephReader missing")); };
       s.onerror=function(){ reject(new Error("could not load /alt1/lib/reader.js")); };
       document.head.appendChild(s);
@@ -340,6 +341,7 @@
 
   async function readScreen(){
     var dbg=$("#a1debug"); dbg.style.display="block"; dbg.textContent="";
+    var shot=$("#a1shot"); shot.style.display="none"; shot.removeAttribute("src");
     function log(s){ dbg.textContent+=s+"\n"; }
     if(!window.alt1){ log("Not running in Alt1."); return; }
     if(!alt1.permissionPixel){
@@ -355,18 +357,17 @@
     catch(e){ log("scan error: "+(e&&e.message||e)); return; }
     if(res.error){ log(res.error); return; }
     if(res.mouse) log("cursor at "+res.mouse.x+","+res.mouse.y+" · screen "+res.width+"×"+res.height);
-    if(!res.reads.length){
-      log("Nothing read under the cursor.");
-      if(res.colors){
-        log(res.colors.stats);
-        log("Brightest text-like colours:");
-        (res.colors.bright||[]).forEach(function(c){ log("  "+c); });
-      }
-      log("---- Copy this whole box and send it to me. ----");
-      return;
+    if(res.snapshot){ shot.src=res.snapshot; shot.style.display="block"; }
+    if(res.reads.length){
+      res.reads.forEach(function(r){ log("["+r.font+"] "+r.text); });
+    } else {
+      log("No clean read yet.");
     }
-    res.reads.forEach(function(r){ log("["+r.font+"] "+r.text); });
-    log("---- If your item name is above, tell me the [font] tag next to it. ----");
+    if(res.colors){
+      log(res.colors.stats);
+      log("bright: "+(res.colors.bright||[]).join(" | "));
+    }
+    log("---- Screenshot this whole panel (image included) and send it to me. ----");
   }
 
   var a1ready=false;

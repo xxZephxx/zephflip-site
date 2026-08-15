@@ -57,9 +57,47 @@ function scan() {
     } catch (e) { /* try next font */ }
   }
   const out = { mouse: { x: m.x, y: m.y }, width: data.width, height: data.height, reads };
-  // Nothing read near the cursor — report on-screen colours to keep calibrating.
-  if (!reads.length) out.colors = sampleColors(data);
+  // Always include a zoomed snapshot around the cursor + on-screen colours so we
+  // can see the real text (size/colour/position) when OCR reads nothing useful.
+  try { out.snapshot = cropDataUrl(data, m); } catch (e) { /* no snapshot */ }
+  out.colors = sampleColors(data);
   return out;
+}
+
+// Crop a region around the cursor, scale it up (nearest-neighbour) and draw a
+// magenta crosshair at the exact cursor pixel, returned as a PNG data URL.
+function cropDataUrl(data, m) {
+  const cw = 340, ch = 72, scale = 4;
+  let sx = Math.max(0, m.x - Math.floor(cw / 2));
+  let sy = Math.max(0, m.y - Math.floor(ch / 2));
+  if (sx + cw > data.width) sx = data.width - cw;
+  if (sy + ch > data.height) sy = data.height - ch;
+  const crop = new ImageData(cw, ch);
+  for (let yy = 0; yy < ch; yy++) {
+    for (let xx = 0; xx < cw; xx++) {
+      const si = ((sy + yy) * data.width + (sx + xx)) * 4;
+      const di = (yy * cw + xx) * 4;
+      crop.data[di] = data.data[si];
+      crop.data[di + 1] = data.data[si + 1];
+      crop.data[di + 2] = data.data[si + 2];
+      crop.data[di + 3] = 255;
+    }
+  }
+  const small = document.createElement("canvas");
+  small.width = cw; small.height = ch;
+  small.getContext("2d").putImageData(crop, 0, 0);
+  const out = document.createElement("canvas");
+  out.width = cw * scale; out.height = ch * scale;
+  const ctx = out.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(small, 0, 0, out.width, out.height);
+  const mx = (m.x - sx) * scale, my = (m.y - sy) * scale;
+  ctx.strokeStyle = "#ff23e5"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mx - 10, my); ctx.lineTo(mx + 10, my);
+  ctx.moveTo(mx, my - 10); ctx.lineTo(mx, my + 10);
+  ctx.stroke();
+  return out.toDataURL("image/png");
 }
 
 // Diagnostic: does crisp text exist at all? Count near-white / near-black pixels
@@ -92,4 +130,4 @@ function sampleColors(data) {
   };
 }
 
-window.ZephReader = { version: "0.5", scan, capture, sampleColors };
+window.ZephReader = { version: "0.6", scan, capture, sampleColors };

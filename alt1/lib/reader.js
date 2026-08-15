@@ -3265,8 +3265,50 @@
           }
         }
         const out = { mouse: { x: m.x, y: m.y }, width: data.width, height: data.height, reads };
-        if (!reads.length) out.colors = sampleColors(data);
+        try {
+          out.snapshot = cropDataUrl(data, m);
+        } catch (e) {
+        }
+        out.colors = sampleColors(data);
         return out;
+      }
+      function cropDataUrl(data, m) {
+        const cw = 340, ch = 72, scale = 4;
+        let sx = Math.max(0, m.x - Math.floor(cw / 2));
+        let sy = Math.max(0, m.y - Math.floor(ch / 2));
+        if (sx + cw > data.width) sx = data.width - cw;
+        if (sy + ch > data.height) sy = data.height - ch;
+        const crop = new ImageData(cw, ch);
+        for (let yy = 0; yy < ch; yy++) {
+          for (let xx = 0; xx < cw; xx++) {
+            const si = ((sy + yy) * data.width + (sx + xx)) * 4;
+            const di = (yy * cw + xx) * 4;
+            crop.data[di] = data.data[si];
+            crop.data[di + 1] = data.data[si + 1];
+            crop.data[di + 2] = data.data[si + 2];
+            crop.data[di + 3] = 255;
+          }
+        }
+        const small = document.createElement("canvas");
+        small.width = cw;
+        small.height = ch;
+        small.getContext("2d").putImageData(crop, 0, 0);
+        const out = document.createElement("canvas");
+        out.width = cw * scale;
+        out.height = ch * scale;
+        const ctx = out.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(small, 0, 0, out.width, out.height);
+        const mx = (m.x - sx) * scale, my = (m.y - sy) * scale;
+        ctx.strokeStyle = "#ff23e5";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(mx - 10, my);
+        ctx.lineTo(mx + 10, my);
+        ctx.moveTo(mx, my - 10);
+        ctx.lineTo(mx, my + 10);
+        ctx.stroke();
+        return out.toDataURL("image/png");
       }
       function sampleColors(data) {
         const d = data.data;
@@ -3300,7 +3342,7 @@
           dark: top(dark)
         };
       }
-      window.ZephReader = { version: "0.5", scan, capture, sampleColors };
+      window.ZephReader = { version: "0.6", scan, capture, sampleColors };
     }
   });
   require_reader();
