@@ -147,7 +147,7 @@
 
     <div id="reader">
       <div class="section-title" style="margin-top:12px">Auto-detect (beta)</div>
-      <button id="probe">🔎 Read item under cursor — hover the item name first</button>
+      <button id="probe">🔎 Read item (3s to hover the item name)</button>
       <pre id="a1debug"></pre>
     </div>
   </main>
@@ -320,6 +320,8 @@
     });
   }
 
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
   // The OCR reader is a self-hosted bundle (Alt1's sandbox blocks CDN imports),
   // loaded on demand as a same-origin classic script that sets window.ZephReader.
   var readerLoading=null;
@@ -343,9 +345,11 @@
     if(!alt1.permissionPixel){
       log("Pixel permission is off — Alt1 → this app → Permissions → allow pixel."); return;
     }
-    log("Reading under your cursor…");
     try{ await loadReader(); }
     catch(e){ log("FATAL: "+(e&&e.message||e)); return; }
+    // You can't hover the game and click this button at once, so count down and
+    // read wherever the cursor is when it hits zero — move it onto the item name.
+    for(var n=3;n>=1;n--){ log("Move your cursor onto the item name — reading in "+n+"…"); await sleep(1000); }
     var res;
     try{ res=window.ZephReader.scan(); }
     catch(e){ log("scan error: "+(e&&e.message||e)); return; }
