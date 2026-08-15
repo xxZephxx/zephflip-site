@@ -3217,17 +3217,23 @@
       var FONTS = { aa12: import_aa_12px_mono.default, aa10: import_aa_10px_mono.default, aa8: import_aa_8px_mono.default, aa8new: import_aa_8px_new.default, chat13: import_chat_13px.default, chat11: import_chat_11px.default, chat10: import_chat_10px.default };
       var COLORS = [
         [255, 255, 255],
-        [230, 230, 230],
-        [200, 200, 200],
+        [235, 235, 235],
+        [210, 210, 210],
         [255, 255, 0],
         [255, 203, 0],
         [255, 152, 31],
         [203, 151, 64],
-        [255, 180, 80],
+        [174, 137, 83],
+        [186, 146, 130],
+        [220, 190, 120],
         [0, 255, 255],
         [0, 255, 0],
         [255, 0, 0],
-        [153, 255, 153]
+        [153, 255, 153],
+        [0, 0, 0],
+        [35, 30, 25],
+        [70, 55, 35],
+        [95, 70, 45]
       ];
       function capture() {
         const ref = a1lib.captureHoldFullRs();
@@ -3257,24 +3263,38 @@
         return out;
       }
       function sampleColors(data) {
-        const bins = /* @__PURE__ */ new Map();
         const d = data.data;
-        for (let i = 0; i < d.length; i += 16) {
-          const r = d[i], g = d[i + 1], b = d[i + 2];
-          const max = Math.max(r, g, b), min = Math.min(r, g, b);
-          if (max < 140) continue;
-          if (max - min < 25 && max < 200) continue;
+        const bright = /* @__PURE__ */ new Map(), dark = /* @__PURE__ */ new Map();
+        let nearWhite = 0, nearBlack = 0, total = 0;
+        const bin = (map, r, g, b) => {
           const key = (r >> 5) + "," + (g >> 5) + "," + (b >> 5);
-          const e = bins.get(key) || { r: 0, g: 0, b: 0, n: 0 };
+          const e = map.get(key) || { r: 0, g: 0, b: 0, n: 0 };
           e.r += r;
           e.g += g;
           e.b += b;
           e.n++;
-          bins.set(key, e);
+          map.set(key, e);
+        };
+        for (let i = 0; i < d.length; i += 16) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          total++;
+          if (min > 200) {
+            nearWhite++;
+            bin(bright, r, g, b);
+          } else if (max < 60) {
+            nearBlack++;
+            bin(dark, r, g, b);
+          } else if (max > 205) bin(bright, r, g, b);
         }
-        return [...bins.values()].sort((a, b) => b.n - a.n).slice(0, 12).map((e) => `${Math.round(e.r / e.n)},${Math.round(e.g / e.n)},${Math.round(e.b / e.n)} \xD7${e.n}`);
+        const top = (map) => [...map.values()].sort((a, b) => b.n - a.n).slice(0, 8).map((e) => `${Math.round(e.r / e.n)},${Math.round(e.g / e.n)},${Math.round(e.b / e.n)} \xD7${e.n}`);
+        return {
+          stats: `sampled ${total} \xB7 near-white ${nearWhite} \xB7 near-black ${nearBlack}`,
+          bright: top(bright),
+          dark: top(dark)
+        };
       }
-      window.ZephReader = { version: "0.2", scan, capture, sampleColors };
+      window.ZephReader = { version: "0.3", scan, capture, sampleColors };
     }
   });
   require_reader();

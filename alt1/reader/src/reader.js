@@ -12,11 +12,14 @@ import chat10 from "@alt1/ocr/dist/fonts/chat_10px.js";
 
 const FONTS = { aa12, aa10, aa8, aa8new, chat13, chat11, chat10 };
 
-// Common RS3 interface text colours (findReadLine takes them all at once).
+// Candidate RS3 text colours (findReadLine takes them all at once). Includes
+// bright (default dark theme), dim gold/amber + dark text (wood/tan GE theme).
 const COLORS = [
-  [255, 255, 255], [230, 230, 230], [200, 200, 200],
-  [255, 255, 0], [255, 203, 0], [255, 152, 31], [203, 151, 64], [255, 180, 80],
+  [255, 255, 255], [235, 235, 235], [210, 210, 210],
+  [255, 255, 0], [255, 203, 0], [255, 152, 31],
+  [203, 151, 64], [174, 137, 83], [186, 146, 130], [220, 190, 120],
   [0, 255, 255], [0, 255, 0], [255, 0, 0], [153, 255, 153],
+  [0, 0, 0], [35, 30, 25], [70, 55, 35], [95, 70, 45],
 ];
 
 function capture() {
@@ -52,24 +55,34 @@ function scan() {
   return out;
 }
 
-// Bucket the brightest, most-saturated pixels (likely text) into coarse colour
-// bins and return the most common ones as "r,g,b ×count".
+// Diagnostic: does crisp text exist at all? Count near-white / near-black pixels
+// (where text usually lives) and list the top colour bins at each extreme. A tiny
+// near-white/near-black count means the client is likely scaled/blurred (bitmap
+// fonts won't match); a healthy count means it's just a colour/region problem.
 function sampleColors(data) {
-  const bins = new Map();
   const d = data.data;
-  for (let i = 0; i < d.length; i += 16) { // sample every 4th pixel
+  const bright = new Map(), dark = new Map();
+  let nearWhite = 0, nearBlack = 0, total = 0;
+  const bin = (map, r, g, b) => {
+    const key = (r >> 5) + "," + (g >> 5) + "," + (b >> 5);
+    const e = map.get(key) || { r: 0, g: 0, b: 0, n: 0 };
+    e.r += r; e.g += g; e.b += b; e.n++; map.set(key, e);
+  };
+  for (let i = 0; i < d.length; i += 16) { // every 4th pixel
     const r = d[i], g = d[i + 1], b = d[i + 2];
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    if (max < 140) continue;            // skip dark background
-    if (max - min < 25 && max < 200) continue; // skip muddy greys
-    const key = (r >> 5) + "," + (g >> 5) + "," + (b >> 5);
-    const e = bins.get(key) || { r: 0, g: 0, b: 0, n: 0 };
-    e.r += r; e.g += g; e.b += b; e.n++;
-    bins.set(key, e);
+    total++;
+    if (min > 200) { nearWhite++; bin(bright, r, g, b); }       // crisp light text
+    else if (max < 60) { nearBlack++; bin(dark, r, g, b); }     // crisp dark text
+    else if (max > 205) bin(bright, r, g, b);                    // bright coloured text
   }
-  return [...bins.values()]
-    .sort((a, b) => b.n - a.n).slice(0, 12)
+  const top = (map) => [...map.values()].sort((a, b) => b.n - a.n).slice(0, 8)
     .map((e) => `${Math.round(e.r / e.n)},${Math.round(e.g / e.n)},${Math.round(e.b / e.n)} ×${e.n}`);
+  return {
+    stats: `sampled ${total} · near-white ${nearWhite} · near-black ${nearBlack}`,
+    bright: top(bright),
+    dark: top(dark),
+  };
 }
 
-window.ZephReader = { version: "0.2", scan, capture, sampleColors };
+window.ZephReader = { version: "0.3", scan, capture, sampleColors };
