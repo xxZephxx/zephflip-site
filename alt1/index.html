@@ -161,8 +161,6 @@
 
 <script>
 (function(){
-  try { if (window.alt1) alt1.identifyAppUrl("./appconfig.json"); } catch (e) {}
-
   var LS = { base:"zf_api_base", token:"zf_api_token" };
   var $ = function(s){ return document.querySelector(s); };
   var timer = null, lastItem = "", lastQuote = null;
@@ -369,8 +367,11 @@
     log("---- If your item name is above, tell me the [font] tag next to it. ----");
   }
 
+  var a1ready=false;
   function initAlt1(){
-    if(!window.alt1) return;
+    if(a1ready || !window.alt1) return a1ready;
+    a1ready=true;
+    try{ alt1.identifyAppUrl("./appconfig.json"); }catch(e){}
     var el=$("#a1status"); el.style.display="block";
     $("#reader").style.display="block";
     $("#probe").onclick=readScreen;
@@ -383,9 +384,17 @@
            :"<b>needs permission</b> (Alt1 → this app → Permissions → allow pixel)");
     }
     upd(); setInterval(upd,5000);
+    return true;
   }
 
-  initAlt1();
+  // window.alt1 is injected shortly after load, so poll for it (up to ~10s)
+  // instead of checking once and giving up.
+  if(!initAlt1()){
+    var a1tries=0;
+    var a1poll=setInterval(function(){
+      if(initAlt1() || ++a1tries>40) clearInterval(a1poll);
+    },250);
+  }
   if(configured()) showApp(); else showSetup(false);
 })();
 </script>
