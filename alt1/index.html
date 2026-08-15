@@ -105,8 +105,10 @@
     <span class="gear" id="gear" title="Settings">⚙</span>
   </header>
   <main>
-    <div class="section-title">Live alerts</div>
-    <div id="alerts"><div class="quiet">Watching your list…</div></div>
+    <div id="alertsblock">
+      <div class="section-title">Live alerts</div>
+      <div id="alerts"><div class="quiet">Watching your list…</div></div>
+    </div>
 
     <div class="section-title" style="margin-top:12px">Item intelligence</div>
     <div class="search">
@@ -121,8 +123,8 @@
         <select id="r-type">
           <option value="NIB">Bought</option>
           <option value="NIS">Sold</option>
-          <option value="PB">Buy offer</option>
-          <option value="PS">Sell offer</option>
+          <option value="PB" class="slotopt">Buy offer</option>
+          <option value="PS" class="slotopt">Sell offer</option>
         </select>
         <input id="r-item" class="grow" placeholder="item" autocomplete="off" spellcheck="false">
       </div>
@@ -165,7 +167,23 @@
   }
   function showApp(){
     $("#setup").style.display="none"; $("#app").style.display="flex";
+    api("/api/me").then(function(m){ applyTier(m && m.tier); }).catch(function(){});
     poll(); clearInterval(timer); timer=setInterval(poll, 20000);
+  }
+
+  // Free Apollo members can't watch items or track GE slots, so hide the
+  // watchlist/slot-only features rather than show them empty or let them fail.
+  function applyTier(tier){
+    // Only hide on an explicit Apollo tier; if the tier is unknown (API error or
+    // an older API), default to showing everything rather than hiding features.
+    var free = tier === "apollo";
+    $("#alertsblock").style.display = free ? "none" : "";
+    var opts = document.querySelectorAll("#r-type .slotopt");
+    for (var i=0;i<opts.length;i++) opts[i].hidden = free;
+    $("#r-slot").style.display = free ? "none" : "";
+    if (free && ($("#r-type").value === "PB" || $("#r-type").value === "PS")) {
+      $("#r-type").value = "NIB"; updateReportPrice();
+    }
   }
 
   $("#save").onclick=function(){
