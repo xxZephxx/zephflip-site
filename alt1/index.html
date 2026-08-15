@@ -330,7 +330,7 @@
     if(readerLoading) return readerLoading;
     readerLoading=new Promise(function(resolve,reject){
       var s=document.createElement("script");
-      s.src="/alt1/lib/reader.js?v=1";
+      s.src="/alt1/lib/reader.js?v=2";
       s.onload=function(){ window.ZephReader?resolve():reject(new Error("reader loaded but ZephReader missing")); };
       s.onerror=function(){ reject(new Error("could not load /alt1/lib/reader.js")); };
       document.head.appendChild(s);
@@ -353,9 +353,17 @@
     catch(e){ log("scan error: "+(e&&e.message||e)); return; }
     if(res.error){ log(res.error); return; }
     log("captured "+res.width+"×"+res.height+" · "+res.reads.length+" lines read");
-    if(!res.reads.length){ log("No text matched — try again with the GE offer clearly on screen."); return; }
-    res.reads.forEach(function(r){ log("["+r.font+"/"+r.color+" y"+r.y+"] "+r.text); });
-    log("---- If your item name is above, tell me the [font/color] next to it. ----");
+    if(!res.reads.length){
+      log("No text matched.");
+      if(res.colors&&res.colors.length){
+        log("Brightest colours on screen (r,g,b ×count):");
+        res.colors.forEach(function(c){ log("  "+c); });
+      }
+      log("---- Copy this whole box and send it to me. ----");
+      return;
+    }
+    res.reads.forEach(function(r){ log("["+r.font+" y"+r.y+"] "+r.text); });
+    log("---- If your item name is above, tell me the [font] tag next to it. ----");
   }
 
   function initAlt1(){
