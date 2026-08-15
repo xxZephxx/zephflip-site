@@ -10,5 +10,5 @@
   "minHeight": 220,
   "maxWidth": 460,
   "maxHeight": 900,
-  "permissions": "overlay,pixel"
+  "permissions": "overlay,pixel,gamestate"
 }
