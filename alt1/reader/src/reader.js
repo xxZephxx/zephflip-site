@@ -34,8 +34,13 @@ function capture() {
 function scan() {
   const data = capture();
   if (!data) return { error: "capture failed (is RuneScape the active window?)" };
-  const m = a1lib.getMousePosition();
-  if (!m) return { error: "no mouse position — hover over the item name in-game, then click Read." };
+  let m;
+  try {
+    m = a1lib.getMousePosition();
+  } catch (e) {
+    return { error: "mouse permission needed — remove & re-add the ZephFlip app in Alt1, then allow the 'gamestate' permission." };
+  }
+  if (!m) return { error: "no mouse position — hover over the item name in-game, then read." };
   const reads = [];
   for (const [fontName, font] of Object.entries(FONTS)) {
     // Generous box around the cursor (tolerates aim + any capture/mouse offset).
@@ -87,4 +92,4 @@ function sampleColors(data) {
   };
 }
 
-window.ZephReader = { version: "0.4", scan, capture, sampleColors };
+window.ZephReader = { version: "0.5", scan, capture, sampleColors };
