@@ -146,8 +146,8 @@
     </div>
 
     <div id="reader">
-      <div class="section-title" style="margin-top:12px">Screen reader (beta)</div>
-      <button id="probe">🔎 Probe Alt1 — open the GE first</button>
+      <div class="section-title" style="margin-top:12px">Auto-detect (beta)</div>
+      <button id="probe">🔎 Read my screen — open the GE first</button>
       <pre id="a1debug"></pre>
     </div>
   </main>
@@ -322,47 +322,53 @@
     });
   }
 
-  async function probeAlt1(){
+  // The OCR reader is a self-hosted bundle (Alt1's sandbox blocks CDN imports),
+  // loaded on demand as a same-origin classic script that sets window.ZephReader.
+  var readerLoading=null;
+  function loadReader(){
+    if(window.ZephReader) return Promise.resolve();
+    if(readerLoading) return readerLoading;
+    readerLoading=new Promise(function(resolve,reject){
+      var s=document.createElement("script");
+      s.src="/alt1/lib/reader.js?v=1";
+      s.onload=function(){ window.ZephReader?resolve():reject(new Error("reader loaded but ZephReader missing")); };
+      s.onerror=function(){ reject(new Error("could not load /alt1/lib/reader.js")); };
+      document.head.appendChild(s);
+    });
+    return readerLoading;
+  }
+
+  async function readScreen(){
     var dbg=$("#a1debug"); dbg.style.display="block"; dbg.textContent="";
     function log(s){ dbg.textContent+=s+"\n"; }
     if(!window.alt1){ log("Not running in Alt1."); return; }
-    log("RS "+alt1.rsWidth+"x"+alt1.rsHeight+" · pixel="+alt1.permissionPixel);
-    try{
-      log("importing @alt1/base…");
-      var a1=await import("https://esm.sh/@alt1/base@1");
-      log("base exports: "+Object.keys(a1).join(", "));
-      var cap=null;
-      try{
-        if(a1.captureHoldFullRs){ cap=a1.captureHoldFullRs(); log("captureHoldFullRs() ok"); }
-        else if(a1.default&&a1.default.captureHoldFullRs){ cap=a1.default.captureHoldFullRs(); log("default.captureHoldFullRs() ok"); }
-        else { log("no captureHoldFullRs export found"); }
-      }catch(e){ log("capture error: "+(e&&e.message||e)); }
-      if(cap){
-        try{ var d=cap.toData?cap.toData():cap; log("capture size: "+(d.width||"?")+"x"+(d.height||"?")); }
-        catch(e){ log("toData error: "+(e&&e.message||e)); }
-      }
-      log("importing @alt1/ocr…");
-      var ocr=await import("https://esm.sh/@alt1/ocr@1");
-      log("ocr exports: "+Object.keys(ocr).join(", "));
-      if(ocr.default) log("ocr.default: "+Object.keys(ocr.default).join(", "));
-      log("---- DONE. Copy this whole box and send it to me. ----");
-    }catch(e){
-      log("FATAL: "+(e&&e.message||e));
-      log("(If the import failed, that tells me to bundle the lib instead of CDN.)");
+    if(!alt1.permissionPixel){
+      log("Pixel permission is off — Alt1 → this app → Permissions → allow pixel."); return;
     }
+    log("Reading… make sure a GE offer is visible on screen.");
+    try{ await loadReader(); }
+    catch(e){ log("FATAL: "+(e&&e.message||e)); return; }
+    var res;
+    try{ res=window.ZephReader.scan(); }
+    catch(e){ log("scan error: "+(e&&e.message||e)); return; }
+    if(res.error){ log(res.error); return; }
+    log("captured "+res.width+"×"+res.height+" · "+res.reads.length+" lines read");
+    if(!res.reads.length){ log("No text matched — try again with the GE offer clearly on screen."); return; }
+    res.reads.forEach(function(r){ log("["+r.font+"/"+r.color+" y"+r.y+"] "+r.text); });
+    log("---- If your item name is above, tell me the [font/color] next to it. ----");
   }
 
   function initAlt1(){
     if(!window.alt1) return;
     var el=$("#a1status"); el.style.display="block";
     $("#reader").style.display="block";
-    $("#probe").onclick=probeAlt1;
+    $("#probe").onclick=readScreen;
     function upd(){
       if(!window.alt1) return;
       var px=alt1.permissionPixel;
       el.className=px?"":"warn";
       el.innerHTML="Alt1 · RS "+alt1.rsWidth+"×"+alt1.rsHeight+" · pixel "+
-        (px?"<b>ready</b> — screen reading coming next"
+        (px?"<b>ready</b> — auto-detect below (beta)"
            :"<b>needs permission</b> (Alt1 → this app → Permissions → allow pixel)");
     }
     upd(); setInterval(upd,5000);
