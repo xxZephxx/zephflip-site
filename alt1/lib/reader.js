@@ -3241,24 +3241,25 @@
       }
       function scan() {
         const data = capture();
-        if (!data) return { error: "capture failed (is RuneScape focused?)" };
+        if (!data) return { error: "capture failed (is RuneScape the active window?)" };
+        const m = a1lib.getMousePosition();
+        if (!m) return { error: "no mouse position \u2014 hover over the item name in-game, then click Read." };
         const reads = [];
-        const step = Math.max(10, Math.floor(data.height / 60));
         for (const [fontName, font] of Object.entries(FONTS)) {
-          const seen = /* @__PURE__ */ new Set();
-          for (let y = 0; y < data.height - 2; y += step) {
-            try {
-              const line = OCR.findReadLine(data, font, COLORS, 0, y, data.width, step + (font.height || 14));
-              const text = line && line.text ? line.text.trim() : "";
-              if (text.length >= 3 && !seen.has(text)) {
-                seen.add(text);
-                reads.push({ font: fontName, y, text });
-              }
-            } catch (e) {
-            }
+          let bx = m.x - 90, by = m.y - 16, w = 180, h = 32;
+          if (bx < 0) bx = 0;
+          if (by < font.basey) by = font.basey;
+          if (bx + w + font.width > data.width) w = data.width - bx - font.width - 1;
+          if (by + h - font.basey + font.height > data.height) h = data.height - by + font.basey - font.height - 1;
+          if (w < font.width || h < 2) continue;
+          try {
+            const line = OCR.findReadLine(data, font, COLORS, bx, by, w, h);
+            const text = line && line.text ? String(line.text).trim() : "";
+            if (text) reads.push({ font: fontName, text });
+          } catch (e) {
           }
         }
-        const out = { width: data.width, height: data.height, reads: reads.slice(0, 80) };
+        const out = { mouse: { x: m.x, y: m.y }, width: data.width, height: data.height, reads };
         if (!reads.length) out.colors = sampleColors(data);
         return out;
       }
@@ -3294,7 +3295,7 @@
           dark: top(dark)
         };
       }
-      window.ZephReader = { version: "0.3", scan, capture, sampleColors };
+      window.ZephReader = { version: "0.4", scan, capture, sampleColors };
     }
   });
   require_reader();

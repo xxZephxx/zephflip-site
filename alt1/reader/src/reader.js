@@ -27,30 +27,32 @@ function capture() {
   return ref ? ref.toData() : null;
 }
 
-// Sweep the screen with every bundled font (trying all colours per read) and
-// collect the distinct lines OCR reads, so we can spot the item name and lock in
-// the font + colour + region.
+// Read the text line under the mouse cursor with every bundled font. findReadLine
+// needs a SMALL box around a point *inside* the text (a full-screen box fails its
+// x+w+font.width<=width bound); the user hovers the item name and it expands the
+// glyph it finds there into the whole line.
 function scan() {
   const data = capture();
-  if (!data) return { error: "capture failed (is RuneScape focused?)" };
+  if (!data) return { error: "capture failed (is RuneScape the active window?)" };
+  const m = a1lib.getMousePosition();
+  if (!m) return { error: "no mouse position — hover over the item name in-game, then click Read." };
   const reads = [];
-  const step = Math.max(10, Math.floor(data.height / 60));
   for (const [fontName, font] of Object.entries(FONTS)) {
-    const seen = new Set();
-    for (let y = 0; y < data.height - 2; y += step) {
-      try {
-        const line = OCR.findReadLine(data, font, COLORS, 0, y, data.width, step + (font.height || 14));
-        const text = line && line.text ? line.text.trim() : "";
-        if (text.length >= 3 && !seen.has(text)) {
-          seen.add(text);
-          reads.push({ font: fontName, y, text });
-        }
-      } catch (e) { /* keep scanning */ }
-    }
+    // Generous box around the cursor (tolerates aim + any capture/mouse offset).
+    let bx = m.x - 90, by = m.y - 16, w = 180, h = 32;
+    if (bx < 0) bx = 0;
+    if (by < font.basey) by = font.basey;
+    if (bx + w + font.width > data.width) w = data.width - bx - font.width - 1;
+    if (by + h - font.basey + font.height > data.height) h = data.height - by + font.basey - font.height - 1;
+    if (w < font.width || h < 2) continue;
+    try {
+      const line = OCR.findReadLine(data, font, COLORS, bx, by, w, h);
+      const text = line && line.text ? String(line.text).trim() : "";
+      if (text) reads.push({ font: fontName, text });
+    } catch (e) { /* try next font */ }
   }
-  const out = { width: data.width, height: data.height, reads: reads.slice(0, 80) };
-  // If nothing matched, the colours I'm guessing are probably wrong — report the
-  // brightest colours actually on screen so we can pick the real text colour.
+  const out = { mouse: { x: m.x, y: m.y }, width: data.width, height: data.height, reads };
+  // Nothing read near the cursor — report on-screen colours to keep calibrating.
   if (!reads.length) out.colors = sampleColors(data);
   return out;
 }
@@ -85,4 +87,4 @@ function sampleColors(data) {
   };
 }
 
-window.ZephReader = { version: "0.3", scan, capture, sampleColors };
+window.ZephReader = { version: "0.4", scan, capture, sampleColors };
