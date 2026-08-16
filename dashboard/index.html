@@ -93,6 +93,27 @@
   </div>
 
   <div class="card">
+    <div class="sec-title">🔎 Item intelligence</div>
+    <div class="row">
+      <input id="q" class="grow" placeholder="look up an item — e.g. tume light" autocomplete="off">
+      <button class="btn btn-ghost" id="q-go">Check</button>
+    </div>
+    <div id="quote" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">💼 Accounts &amp; cash</div>
+    <div id="accounts"><div class="faint">Loading…</div></div>
+    <div class="row" style="margin-top:10px">
+      <input id="a-name" placeholder="new account name" autocomplete="off">
+      <input id="a-cash" placeholder="starting cash (e.g. 5b)" autocomplete="off">
+      <button class="btn btn-ghost" id="a-add">Add account</button>
+    </div>
+    <div class="status" id="a-status"></div>
+    <div class="faint" id="portfolio" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
     <div class="sec-title">🎰 Your GE slots</div>
     <div id="slots"><div class="faint">Loading…</div></div>
   </div>
@@ -197,7 +218,72 @@
     api("/api/slots").then(renderSlots).catch(function(){});
     api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
     api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
+    api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
+    api("/api/portfolio").then(renderPortfolio).catch(function(){});
   }
+
+  function renderPortfolio(p){
+    $("#portfolio").innerHTML = "Reported cash <b class='num'>"+gp(p.reported_cash)+"</b> gp · "+
+      "Open cost basis <b class='num'>"+gp(p.open_cost_basis)+"</b> gp · "+
+      "<b>"+(p.positions?p.positions.length:0)+"</b> open position"+((p.positions&&p.positions.length===1)?"":"s");
+  }
+
+  function renderAccounts(list){
+    var el = $("#accounts");
+    if(!list.length){ el.innerHTML = '<div class="faint">No accounts yet — add one below to start tracking GE slots.</div>'; return; }
+    el.innerHTML = '<table>'+list.map(function(a){
+      return '<tr><td><b>'+esc(a.name)+'</b></td>'+
+        '<td class="num">'+gp(a.cash)+' gp</td>'+
+        '<td style="text-align:right">'+
+          '<input data-cash-for="'+a.id+'" placeholder="set cash" style="width:110px">'+
+          '<button class="btn-ghost" data-save-cash="'+a.id+'" style="padding:5px 9px;font-size:12px;margin-left:6px">Save</button>'+
+          '<button class="btn-x" data-reset="'+a.id+'" style="margin-left:6px">Reset slots</button>'+
+        '</td></tr>';
+    }).join("")+'</table>';
+    el.querySelectorAll("[data-save-cash]").forEach(function(b){
+      b.onclick = function(){
+        var id = b.getAttribute("data-save-cash");
+        var v = $('[data-cash-for="'+id+'"]').value.trim(); if(!v) return;
+        api("/api/accounts",{method:"PATCH",body:{id:Number(id),cash:parseGp(v)}})
+          .then(function(){ setStatus($("#a-status"),"Cash updated.","ok"); reloadAccounts(); })
+          .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
+      };
+    });
+    el.querySelectorAll("[data-reset]").forEach(function(b){
+      b.onclick = function(){
+        if(!confirm("Clear all GE slots on this account?")) return;
+        api("/api/accounts/reset",{method:"POST",body:{id:Number(b.getAttribute("data-reset"))}})
+          .then(function(){ setStatus($("#a-status"),"Slots cleared.","ok"); api("/api/slots").then(renderSlots); })
+          .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
+      };
+    });
+  }
+  function reloadAccounts(){
+    api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); });
+    api("/api/portfolio").then(renderPortfolio).catch(function(){});
+  }
+  $("#a-add").onclick = function(){
+    var name = $("#a-name").value.trim(); if(!name) return;
+    var cash = $("#a-cash").value.trim();
+    api("/api/accounts",{method:"POST",body:{name:name, cash:cash?parseGp(cash):0}})
+      .then(function(){ $("#a-name").value=""; $("#a-cash").value=""; setStatus($("#a-status"),"Account added.","ok"); reloadAccounts(); })
+      .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
+  };
+
+  function lookup(){
+    var name = $("#q").value.trim(); if(!name) return;
+    $("#quote").innerHTML = '<div class="faint">Looking up…</div>';
+    api("/api/quote?item="+encodeURIComponent(name)).then(function(d){
+      if(!d.complete){ $("#quote").innerHTML = '<div class="faint">'+esc(d.item)+' — live price unavailable right now.</div>'; return; }
+      $("#quote").innerHTML = '<div style="background:var(--panel2);border-radius:10px;padding:12px 14px">'+
+        '<div style="font-weight:700;font-size:16px">'+esc(d.item)+(d.grade?' · <span class="pill">'+d.grade+' ('+d.zephscore+')</span>':'')+'</div>'+
+        '<div class="num" style="margin-top:4px">Buy <b>'+gp(d.instant_sell)+'</b> → Sell <b>'+gp(d.instant_buy)+'</b> gp</div>'+
+        '<div class="num" style="margin-top:4px">Margin <b class="'+(d.margin>=0?"profit":"loss")+'">'+(d.margin>=0?"+":"")+gp(d.margin)+'</b> · ROI <b>'+d.roi+'%</b>'+
+        (d.volume!=null?' · Vol <b>'+gp(d.volume)+'/h</b>':'')+'</div></div>';
+    }).catch(function(e){ $("#quote").innerHTML = '<div class="status err">'+esc(e.message)+'</div>'; });
+  }
+  $("#q-go").onclick = lookup;
+  $("#q").addEventListener("keydown", function(e){ if(e.key==="Enter") lookup(); });
 
   function renderRank(r){
     var info = r.rank;
@@ -225,9 +311,18 @@
     if(!filled.length){ el.innerHTML = '<div class="faint">No occupied slots. Report a buy/sell offer below with a slot number.</div>'; return; }
     var rows = filled.map(function(x){
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
-      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+'</td><td class="faint">'+esc(x.account)+'</td></tr>';
+      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+'</td><td class="faint">'+esc(x.account)+'</td>'+
+        '<td style="text-align:right"><button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button></td></tr>';
     }).join("");
-    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Account</th></tr>'+rows+'</table>';
+    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Account</th><th></th></tr>'+rows+'</table>';
+    el.querySelectorAll("[data-cancel]").forEach(function(b){
+      b.onclick = function(){
+        if(!confirm("Clear this slot?")) return;
+        api("/api/slots",{method:"DELETE",body:{flip_id:Number(b.getAttribute("data-cancel"))}})
+          .then(function(){ api("/api/slots").then(renderSlots); reloadAccounts(); })
+          .catch(function(e){ alert(e.message); });
+      };
+    });
   }
 
   function renderWatchlist(list){
@@ -262,7 +357,9 @@
         '<div class="row"><b>'+x.market+' Market</b>'+(cur?'<span class="pill">'+(cur.enabled?"active":"paused")+' · '+gp(cur.cash)+' gp</span>':'')+'</div>'+
         '<div class="row" style="margin-top:8px">'+
           '<input class="grow" data-g="'+x.g+'" data-f="cash" placeholder="budget (e.g. 5b)" value="'+(cur?cur.cash:"")+'">'+
-          '<input data-g="'+x.g+'" data-f="min_profit" placeholder="min margin" value="'+(cur&&cur.min_profit?cur.min_profit:"")+'" style="width:120px">'+
+          '<input data-g="'+x.g+'" data-f="min_profit" placeholder="min margin" value="'+(cur&&cur.min_profit?cur.min_profit:"")+'" style="width:110px">'+
+          '<input data-g="'+x.g+'" data-f="min_roi" placeholder="ROI %" value="'+(cur&&cur.min_roi?cur.min_roi:"")+'" style="width:78px">'+
+          '<input data-g="'+x.g+'" data-f="min_volume" placeholder="min vol" value="'+(cur&&cur.min_volume&&cur.min_volume>1?cur.min_volume:"")+'" style="width:82px">'+
           '<button class="btn btn-gold" data-set="'+x.g+'">Save</button>'+
           (cur?'<button class="btn-x" data-clear="'+x.g+'">Clear</button>':'')+
         '</div></div>';
@@ -272,7 +369,10 @@
         var g = b.getAttribute("data-set");
         var cash = $('#scout [data-g="'+g+'"][data-f="cash"]').value.trim();
         var mp = $('#scout [data-g="'+g+'"][data-f="min_profit"]').value.trim();
-        api("/api/scout",{method:"POST",body:{group:g, cash:parseGp(cash), min_profit:mp?parseGp(mp):0}})
+        var roi = $('#scout [data-g="'+g+'"][data-f="min_roi"]').value.trim();
+        var vol = $('#scout [data-g="'+g+'"][data-f="min_volume"]').value.trim();
+        api("/api/scout",{method:"POST",body:{group:g, cash:parseGp(cash), min_profit:mp?parseGp(mp):0,
+          min_roi:roi?parseFloat(roi):0, min_volume:vol?parseInt(vol,10):1}})
           .then(function(){ setStatus($("#s-status"),"🔭 "+g+" scout saved.","ok"); return api("/api/scout"); })
           .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); })
           .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
