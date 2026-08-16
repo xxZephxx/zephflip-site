@@ -70,7 +70,7 @@
   <p>Manage your GE slots, watchlist, and scout from the web — synced live with Discord.</p>
   <p style="margin-top:22px"><button class="btn btn-discord" id="loginBtn">Login with Discord</button></p>
   <p class="status" id="loginStatus"></p>
-  <p class="faint" style="margin-top:26px">You need to be a ZephFlip member. New here? Join at <a href="https://discord.gg/sJrVg3zCfv">the Discord</a>.</p>
+  <p class="faint" style="margin-top:26px">The dashboard is a paid-tier perk — 🌊 Poseidon, 💀 Hades, or ⚡ Zeus. New here? Join at <a href="https://discord.gg/sJrVg3zCfv">the Discord</a> and ascend with <b>$subscribe</b>.</p>
 </div>
 
 <div id="app" class="wrap hidden">
@@ -177,6 +177,7 @@
     if(params.get("token")){ localStorage.setItem(LS, params.get("token")); }
     else if(params.get("error")){
       var msgs = { not_a_member:"That Discord account isn't a ZephFlip member yet.",
+        needs_paid_tier:"The dashboard is a paid-tier perk. Ascend to 🌊 Poseidon, 💀 Hades, or ⚡ Zeus to unlock it — use $subscribe in Discord.",
         login_expired:"Login expired — please try again.", discord_rejected:"Discord declined the login." };
       window._loginError = msgs[params.get("error")] || "Login failed. Try again.";
     }
@@ -207,19 +208,27 @@
   }
 
   function loadAll(){
+    // Gate on the live tier first: the dashboard is a paid-tier perk, so a
+    // member who downgraded (or holds a lingering token) is bounced to the
+    // login screen instead of loading, matching the server-side login gate.
     api("/api/me").then(function(m){
       tier = (m.tier||"apollo");
+      if((TIERRANK[tier]||0) < TIERRANK["poseidon"]){
+        localStorage.removeItem(LS);
+        showLogin("The dashboard is a paid-tier perk. Ascend to 🌊 Poseidon, 💀 Hades, or ⚡ Zeus to unlock it — use $subscribe in Discord.");
+        return;
+      }
       $("#name").textContent = m.name || "Trader";
       $("#tier").textContent = tier;
       renderScoutForms();
+      api("/api/rank").then(renderRank).catch(function(){});
+      api("/api/alerts").then(function(a){ renderAlerts(a.alerts||[]); }).catch(function(){});
+      api("/api/slots").then(renderSlots).catch(function(){});
+      api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
+      api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
+      api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
+      api("/api/portfolio").then(renderPortfolio).catch(function(){});
     }).catch(function(){});
-    api("/api/rank").then(renderRank).catch(function(){});
-    api("/api/alerts").then(function(a){ renderAlerts(a.alerts||[]); }).catch(function(){});
-    api("/api/slots").then(renderSlots).catch(function(){});
-    api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
-    api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
-    api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
-    api("/api/portfolio").then(renderPortfolio).catch(function(){});
   }
 
   function renderPortfolio(p){
