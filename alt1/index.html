@@ -259,7 +259,8 @@
       stat("Margin (after tax)", gp(d.margin), mc)+
       stat("ROI", d.roi!=null?d.roi+"%":"—")+
       stat("ZephScore", d.zephscore!=null?(d.grade+" "+d.zephscore+"/100"):"—")+
-      stat("Volume / hr", d.volume!=null?Number(d.volume).toLocaleString():"—");
+      stat("Volume / hr", d.volume!=null?Number(d.volume).toLocaleString():"—")+
+      stat("Volume / 24h", d.volume_24h!=null?Number(d.volume_24h).toLocaleString():"—");
     if(mv!=null) html+=stat("Recent move",(mv>0?"+":"")+mv+"%", mv<0?"var(--loss)":"var(--profit)");
     html+=recentTrades(d);
     $("#item").innerHTML=html+"</div>";
