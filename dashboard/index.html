@@ -32,7 +32,8 @@
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums;}
   .profit{color:var(--profit);} .loss{color:var(--loss);}
   button,.btn{font-family:var(--sans);font-weight:600;font-size:14px;border-radius:10px;
-    padding:9px 14px;cursor:pointer;border:1px solid transparent;}
+    padding:9px 14px;cursor:pointer;border:1px solid transparent;
+    display:inline-block;text-decoration:none;line-height:1.1;}
   .btn-gold{background:linear-gradient(180deg,var(--gold),#c9a85f);color:#241a05;}
   .btn-discord{background:#5865F2;color:#fff;font-size:16px;padding:13px 22px;border:none;
     display:inline-flex;align-items:center;gap:10px;}
@@ -71,6 +72,7 @@
   <p style="margin-top:22px"><button class="btn btn-discord" id="loginBtn">Login with Discord</button></p>
   <p class="status" id="loginStatus"></p>
   <p class="faint" style="margin-top:26px">The dashboard is a paid-tier perk — 🌊 Poseidon, 💀 Hades, or ⚡ Zeus. New here? Join at <a href="https://discord.gg/sJrVg3zCfv">the Discord</a> and ascend with <b>$subscribe</b>.</p>
+  <p style="margin-top:18px"><a class="btn btn-ghost" href="/">← Back to home</a></p>
 </div>
 
 <div id="app" class="wrap hidden">
@@ -78,6 +80,7 @@
     <h1><img src="/favicon.png" alt=""><span id="name">ZephFlip</span></h1>
     <span class="tier" id="tier">—</span>
     <span class="faint" id="rank" style="margin-left:auto"></span>
+    <a class="btn btn-ghost" href="/">Home</a>
     <button class="btn btn-ghost" id="logout">Log out</button>
   </div>
 
