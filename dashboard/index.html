@@ -332,10 +332,16 @@
     var rows = filled.map(function(x){
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
       var badge = x.likely_filled ? ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">✓ likely '+(x.stage==="selling"?"sold":"bought")+'</span>' : '';
-      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="faint">'+esc(x.account)+'</td>'+
+      var qty = x.quantity ? ' <span class="faint">×'+gp(x.quantity)+'</span>' : '';
+      var offer;
+      if(x.stage==="buying" && x.offer_price){ offer = 'Buy <b>'+gp(x.offer_price)+'</b>'+qty; }
+      else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty; }
+      else if(x.stage==="bought" && x.buy_price){ offer = '<span class="faint">held · cost '+gp(x.buy_price)+qty+'</span>'; }
+      else { offer = '<span class="faint">—</span>'; }
+      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="faint">'+esc(x.account)+'</td>'+
         '<td style="text-align:right"><button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button></td></tr>';
     }).join("");
-    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Account</th><th></th></tr>'+rows+'</table>';
+    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Account</th><th></th></tr>'+rows+'</table>';
     el.querySelectorAll("[data-cancel]").forEach(function(b){
       b.onclick = function(){
         if(!confirm("Clear this slot?")) return;
