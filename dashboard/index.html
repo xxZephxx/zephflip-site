@@ -60,7 +60,27 @@
   .status.err{color:var(--loss);} .status.ok{color:var(--profit);}
   .hidden{display:none;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media(max-width:640px){.grid2{grid-template-columns:1fr;}}
+  /* Wide tables scroll inside their card instead of spilling past the window. */
+  #slots,#watchlist,#accounts{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #slots table,#watchlist table{min-width:max-content;}
+  .num{white-space:nowrap;}
+  @media(max-width:640px){
+    .grid2{grid-template-columns:1fr;}
+    .wrap{padding:14px 11px 48px;}
+    .card{padding:13px 13px;}
+    body{font-size:14px;}
+    table{font-size:13px;}
+    td,th{padding:6px 5px;}
+    h1{font-size:18px;}
+    .sec-title{font-size:11px;letter-spacing:.12em;}
+    /* Stack each account (name / balance / controls) so nothing runs off-screen. */
+    #accounts table,#accounts tbody,#accounts tr,#accounts td{display:block;width:100%;}
+    #accounts tr{border-top:1px solid var(--line);padding:9px 0;}
+    #accounts td{border-top:none;padding:2px 0;text-align:left!important;white-space:normal;}
+    #accounts td:last-child{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
+    #accounts input[data-cash-for]{flex:1;min-width:120px;width:auto!important;margin:0!important;}
+    #accounts [data-save-cash],#accounts [data-reset]{margin-left:0!important;}
+  }
 </style>
 </head>
 <body>
