@@ -283,13 +283,28 @@
       .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
   };
 
+  function tradeList(rows){
+    if(!rows || !rows.length) return '<div class="num faint" style="font-size:12px">collecting…</div>';
+    return rows.map(function(r){
+      var t = new Date(r.at), hh = isNaN(t.getTime()) ? "" : t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+      return '<div class="num" style="font-size:12px">'+(hh?'<span class="faint">'+hh+'</span> ':'')+'<b>'+gp(r.price)+'</b></div>';
+    }).join("");
+  }
+  function recentBlock(d){
+    if(!d.recent_buys && !d.recent_sells) return "";
+    return '<div style="display:flex;gap:24px;margin-top:10px">'+
+      '<div><div class="faint" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">Last 3 instant buys</div>'+tradeList(d.recent_buys)+'</div>'+
+      '<div><div class="faint" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">Last 3 instant sells</div>'+tradeList(d.recent_sells)+'</div>'+
+    '</div>';
+  }
   function quoteCard(d){
-    if(!d || !d.complete){ return '<div class="faint" style="margin-top:8px">'+esc((d&&d.item)||"item")+' — live price unavailable right now.</div>'; }
+    if(!d || !d.complete){ return '<div class="faint" style="margin-top:8px">'+esc((d&&d.item)||"item")+' — live price unavailable right now.'+recentBlock(d||{})+'</div>'; }
     return '<div style="background:var(--panel2);border-radius:10px;padding:12px 14px;margin-top:8px">'+
       '<div style="font-weight:700;font-size:16px">'+esc(d.item)+(d.grade?' · <span class="pill">'+d.grade+' ('+d.zephscore+')</span>':'')+'</div>'+
       '<div class="num" style="margin-top:4px">Buy <b>'+gp(d.instant_sell)+'</b> → Sell <b>'+gp(d.instant_buy)+'</b> gp</div>'+
       '<div class="num" style="margin-top:4px">Margin <b class="'+(d.margin>=0?"profit":"loss")+'">'+(d.margin>=0?"+":"")+gp(d.margin)+'</b> · ROI <b>'+d.roi+'%</b>'+
-      (d.volume!=null?' · Vol <b>'+gp(d.volume)+'/h</b>':'')+'</div></div>';
+      (d.volume!=null?' · Vol <b>'+gp(d.volume)+'/h</b>':'')+'</div>'+
+      recentBlock(d)+'</div>';
   }
   function lookup(){
     var raw = $("#q").value.trim(); if(!raw) return;
