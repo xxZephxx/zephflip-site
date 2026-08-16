@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZephFlip — Dashboard</title>
+<link rel="icon" href="/favicon.png">
+<style>
+  :root{
+    --ground:#0d0916; --panel:#160f24; --panel2:#1f1730; --line:#2c2340;
+    --ink:#ece7f6; --muted:#a99dc4; --faint:#776b93;
+    --amethyst:#b491ff; --amethyst-deep:#7c3aed; --gold:#e6c583;
+    --profit:#63d79b; --loss:#f2726f;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;
+    line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:var(--amethyst);}
+  .wrap{max-width:900px;margin:0 auto;padding:20px 16px 60px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:16px 18px;margin-bottom:16px;}
+  .sec-title{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 10px;}
+  h1{font-size:20px;margin:0;display:flex;align-items:center;gap:10px;}
+  h1 img{width:26px;height:26px;}
+  .tier{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;
+    background:var(--panel2);color:var(--gold);text-transform:capitalize;}
+  .muted{color:var(--muted);} .faint{color:var(--faint);font-size:13px;}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .profit{color:var(--profit);} .loss{color:var(--loss);}
+  button,.btn{font-family:var(--sans);font-weight:600;font-size:14px;border-radius:10px;
+    padding:9px 14px;cursor:pointer;border:1px solid transparent;}
+  .btn-gold{background:linear-gradient(180deg,var(--gold),#c9a85f);color:#241a05;}
+  .btn-discord{background:#5865F2;color:#fff;font-size:16px;padding:13px 22px;border:none;
+    display:inline-flex;align-items:center;gap:10px;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--amethyst);}
+  .btn-x{background:transparent;border:1px solid var(--line);color:var(--loss);padding:5px 10px;font-size:12px;}
+  input,select{background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+    color:var(--ink);padding:9px 11px;font-size:14px;min-width:0;}
+  input:focus,select:focus{outline:none;border-color:var(--amethyst);}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .row>.grow{flex:1;min-width:120px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  td,th{text-align:left;padding:7px 6px;border-top:1px solid var(--line);}
+  th{color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-top:none;}
+  .pill{font-size:11px;font-family:var(--mono);padding:1px 7px;border-radius:20px;background:var(--panel2);color:var(--muted);}
+  .alert{display:flex;gap:8px;align-items:center;padding:8px 10px;margin:5px 0;border-radius:9px;
+    background:var(--panel2);font-size:14px;}
+  .spike{border-left:3px solid var(--profit);} .crash{border-left:3px solid var(--loss);}
+  #login{max-width:440px;margin:12vh auto 0;text-align:center;padding:0 16px;}
+  #login h1{justify-content:center;font-size:26px;margin-bottom:6px;}
+  #login p{color:var(--muted);}
+  #login img.logo{width:56px;height:56px;margin-bottom:14px;}
+  .status{font-size:13px;color:var(--faint);min-height:18px;margin-top:6px;}
+  .status.err{color:var(--loss);} .status.ok{color:var(--profit);}
+  .hidden{display:none;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <img class="logo" src="/favicon.png" alt="">
+  <h1>ZephFlip Dashboard</h1>
+  <p>Manage your GE slots, watchlist, and scout from the web — synced live with Discord.</p>
+  <p style="margin-top:22px"><button class="btn btn-discord" id="loginBtn">Login with Discord</button></p>
+  <p class="status" id="loginStatus"></p>
+  <p class="faint" style="margin-top:26px">You need to be a ZephFlip member. New here? Join at <a href="https://discord.gg/sJrVg3zCfv">the Discord</a>.</p>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1><img src="/favicon.png" alt=""><span id="name">ZephFlip</span></h1>
+    <span class="tier" id="tier">—</span>
+    <span class="faint" id="rank" style="margin-left:auto"></span>
+    <button class="btn btn-ghost" id="logout">Log out</button>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title">🔭 Live alerts</div>
+      <div id="alerts"><div class="faint">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">🏆 Season rank</div>
+      <div id="rankcard" class="faint">Loading…</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🎰 Your GE slots</div>
+    <div id="slots"><div class="faint">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">📋 Report a trade / offer</div>
+    <div class="row">
+      <select id="r-type">
+        <option value="NIB">Bought</option>
+        <option value="NIS">Sold</option>
+        <option value="PB">Buy offer</option>
+        <option value="PS">Sell offer</option>
+      </select>
+      <input id="r-item" class="grow" placeholder="item — e.g. tume light" autocomplete="off">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="r-price" class="grow" placeholder="price — full gp or 2.5b" autocomplete="off">
+      <input id="r-qty" placeholder="qty" value="1" style="width:60px">
+      <input id="r-slot" placeholder="slot" style="width:60px">
+      <button class="btn btn-gold" id="r-submit">Submit</button>
+    </div>
+    <div class="status" id="r-status"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">👀 Watchlist</div>
+    <div class="row">
+      <input id="w-item" class="grow" placeholder="add an item to watch" autocomplete="off">
+      <button class="btn btn-gold" id="w-add">Watch</button>
+    </div>
+    <div class="status" id="w-status"></div>
+    <div id="watchlist" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🔭 Scout</div>
+    <div class="faint" id="scout-help"></div>
+    <div id="scout" style="margin-top:8px"></div>
+    <div class="status" id="s-status"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var API = "https://zephflip-production.up.railway.app";
+  var LS = "zf_dash_token";
+  var $ = function(s){ return document.querySelector(s); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+  var gp = function(n){ return Number(n||0).toLocaleString(); };
+  var tier = null;
+
+  function token(){ return localStorage.getItem(LS) || ""; }
+  function setStatus(el, msg, kind){ el.textContent = msg||""; el.className = "status " + (kind||""); }
+
+  // Capture the token handed back by the OAuth callback (#token=…) or an #error.
+  (function readHash(){
+    var h = location.hash.replace(/^#/, "");
+    if(!h) return;
+    var params = new URLSearchParams(h);
+    if(params.get("token")){ localStorage.setItem(LS, params.get("token")); }
+    else if(params.get("error")){
+      var msgs = { not_a_member:"That Discord account isn't a ZephFlip member yet.",
+        login_expired:"Login expired — please try again.", discord_rejected:"Discord declined the login." };
+      window._loginError = msgs[params.get("error")] || "Login failed. Try again.";
+    }
+    history.replaceState(null,"",location.pathname);
+  })();
+
+  function api(path, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({ "Authorization":"Bearer "+token() }, opts.headers||{});
+    if(opts.body){ opts.headers["Content-Type"]="application/json"; opts.body=JSON.stringify(opts.body); }
+    return fetch(API+path, opts).then(function(r){
+      if(r.status===401){ localStorage.removeItem(LS); showLogin("Session expired — log in again."); throw new Error("401"); }
+      return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||("HTTP "+r.status)); return j; });
+    });
+  }
+
+  function showLogin(msg){
+    $("#app").classList.add("hidden"); $("#login").classList.remove("hidden");
+    if(msg) setStatus($("#loginStatus"), msg, "err");
+    else if(window._loginError) setStatus($("#loginStatus"), window._loginError, "err");
+  }
+  $("#loginBtn").onclick = function(){ location.href = API + "/auth/login"; };
+  $("#logout").onclick = function(){ localStorage.removeItem(LS); showLogin(); };
+
+  function showApp(){
+    $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+    loadAll();
+  }
+
+  function loadAll(){
+    api("/api/me").then(function(m){
+      tier = (m.tier||"apollo");
+      $("#name").textContent = m.name || "Trader";
+      $("#tier").textContent = tier;
+      renderScoutForms();
+    }).catch(function(){});
+    api("/api/rank").then(renderRank).catch(function(){});
+    api("/api/alerts").then(function(a){ renderAlerts(a.alerts||[]); }).catch(function(){});
+    api("/api/slots").then(renderSlots).catch(function(){});
+    api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
+    api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
+  }
+
+  function renderRank(r){
+    var info = r.rank;
+    var el = $("#rankcard");
+    if(!info || !info.rank){ el.innerHTML = '<span class="faint">No ranked flips this season yet.</span>'; $("#rank").textContent=""; return; }
+    el.innerHTML = '<div class="num" style="font-size:26px;font-weight:700">#'+info.rank+'</div>'+
+      '<div class="faint">'+esc(r.season)+' • '+gp(info.net_profit)+' gp profit</div>';
+    $("#rank").textContent = "Rank #"+info.rank+" · "+r.season;
+  }
+
+  function renderAlerts(list){
+    var el = $("#alerts");
+    if(!list.length){ el.innerHTML = '<div class="faint">No active alerts — market is calm.</div>'; return; }
+    el.innerHTML = list.map(function(a){
+      var up = a.kind==="spike";
+      return '<div class="alert '+(up?"spike":"crash")+'"><b>'+esc(a.item)+'</b>'+
+        '<span class="num '+(up?"profit":"loss")+'" style="margin-left:auto">'+(a.movement_pct>0?"+":"")+a.movement_pct+'%</span>'+
+        '<span class="num faint">'+gp(a.price)+'</span></div>';
+    }).join("");
+  }
+
+  function renderSlots(s){
+    var el = $("#slots");
+    var filled = (s.slots||[]).filter(function(x){ return x.item; });
+    if(!filled.length){ el.innerHTML = '<div class="faint">No occupied slots. Report a buy/sell offer below with a slot number.</div>'; return; }
+    var rows = filled.map(function(x){
+      var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
+      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+'</td><td class="faint">'+esc(x.account)+'</td></tr>';
+    }).join("");
+    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Account</th></tr>'+rows+'</table>';
+  }
+
+  function renderWatchlist(list){
+    var manual = list.filter(function(w){ return !w.auto_slotted; });
+    var el = $("#watchlist");
+    if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet.</div>'; return; }
+    el.innerHTML = '<table>'+manual.map(function(w){
+      return '<tr><td><b>'+esc(w.item_name)+'</b></td>'+
+        '<td class="faint">'+(w.enabled?"":"paused")+'</td>'+
+        '<td style="text-align:right"><button class="btn-x" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
+    }).join("")+'</table>';
+    el.querySelectorAll(".btn-x").forEach(function(b){
+      b.onclick = function(){
+        api("/api/watchlist",{method:"DELETE",body:{item:b.getAttribute("data-item")}})
+          .then(function(){ api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
+          .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
+      };
+    });
+  }
+
+  var GROUPS = [{g:"Supreme",tier:"zeus",market:"Olympian"},{g:"Elite",tier:"hades",market:"Stygian"},{g:"Bulk",tier:"poseidon",market:"Tidal"}];
+  var TIERRANK = { apollo:0, poseidon:1, hades:2, zeus:3 };
+  function renderScoutForms(){
+    if(tier===null) return;
+    var mine = window._scouts || [];
+    var allowed = GROUPS.filter(function(x){ return TIERRANK[tier] >= TIERRANK[x.tier]; });
+    if(!allowed.length){ $("#scout-help").textContent = "The scout is a paid feature — upgrade to unlock it."; $("#scout").innerHTML=""; return; }
+    $("#scout-help").textContent = "Set a budget and get pinged in Discord when a new flip fits it. One scout per market.";
+    $("#scout").innerHTML = allowed.map(function(x){
+      var cur = mine.filter(function(m){ return m.group===x.g; })[0];
+      return '<div style="border-top:1px solid var(--line);padding:10px 0">'+
+        '<div class="row"><b>'+x.market+' Market</b>'+(cur?'<span class="pill">'+(cur.enabled?"active":"paused")+' · '+gp(cur.cash)+' gp</span>':'')+'</div>'+
+        '<div class="row" style="margin-top:8px">'+
+          '<input class="grow" data-g="'+x.g+'" data-f="cash" placeholder="budget (e.g. 5b)" value="'+(cur?cur.cash:"")+'">'+
+          '<input data-g="'+x.g+'" data-f="min_profit" placeholder="min margin" value="'+(cur&&cur.min_profit?cur.min_profit:"")+'" style="width:120px">'+
+          '<button class="btn btn-gold" data-set="'+x.g+'">Save</button>'+
+          (cur?'<button class="btn-x" data-clear="'+x.g+'">Clear</button>':'')+
+        '</div></div>';
+    }).join("");
+    $("#scout").querySelectorAll("[data-set]").forEach(function(b){
+      b.onclick = function(){
+        var g = b.getAttribute("data-set");
+        var cash = $('#scout [data-g="'+g+'"][data-f="cash"]').value.trim();
+        var mp = $('#scout [data-g="'+g+'"][data-f="min_profit"]').value.trim();
+        api("/api/scout",{method:"POST",body:{group:g, cash:parseGp(cash), min_profit:mp?parseGp(mp):0}})
+          .then(function(){ setStatus($("#s-status"),"🔭 "+g+" scout saved.","ok"); return api("/api/scout"); })
+          .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); })
+          .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
+      };
+    });
+    $("#scout").querySelectorAll("[data-clear]").forEach(function(b){
+      b.onclick = function(){
+        api("/api/scout",{method:"DELETE",body:{group:b.getAttribute("data-clear")}})
+          .then(function(){ setStatus($("#s-status"),"Scout cleared.","ok"); return api("/api/scout"); })
+          .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); })
+          .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
+      };
+    });
+  }
+
+  // Full gp or shorthand (5b, 500m, 2.5b) -> integer gp. Bare number = millions.
+  function parseGp(v){
+    v = String(v||"").trim().toLowerCase().replace(/,/g,"");
+    var m = v.match(/^(\d+(?:\.\d+)?)([kmbt])?$/);
+    if(!m) return v;
+    var n = parseFloat(m[1]);
+    var mult = { k:1e3, m:1e6, b:1e9, t:1e12 }[m[2]] || (n>=1e6?1:1e6);
+    return Math.round(n*mult);
+  }
+
+  $("#r-submit").onclick = function(){
+    var body = { type:$("#r-type").value, item:$("#r-item").value.trim(),
+      price:parseGp($("#r-price").value), quantity:parseInt($("#r-qty").value||"1",10) };
+    var slot = $("#r-slot").value.trim(); if(slot) body.slot = parseInt(slot,10);
+    if(!body.item){ setStatus($("#r-status"),"Enter an item.","err"); return; }
+    setStatus($("#r-status"),"Submitting…");
+    api("/api/report",{method:"POST",body:body}).then(function(j){
+      setStatus($("#r-status"), j.quarantined ? ("⚠️ "+(j.warning||"held for review")) : "✅ Reported.", j.quarantined?"":"ok");
+      $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value="";
+      api("/api/slots").then(renderSlots);
+    }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
+  };
+  $("#w-add").onclick = function(){
+    var item = $("#w-item").value.trim();
+    if(!item){ return; }
+    setStatus($("#w-status"),"Adding…");
+    api("/api/watchlist",{method:"POST",body:{item:item}}).then(function(){
+      setStatus($("#w-status"),"","");
+      $("#w-item").value="";
+      api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); });
+    }).catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
+  };
+
+  if(token()) showApp(); else showLogin();
+})();
+</script>
+</body>
+</html>
