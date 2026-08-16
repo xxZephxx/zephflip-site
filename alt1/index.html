@@ -261,7 +261,22 @@
       stat("ZephScore", d.zephscore!=null?(d.grade+" "+d.zephscore+"/100"):"—")+
       stat("Volume / hr", d.volume!=null?Number(d.volume).toLocaleString():"—");
     if(mv!=null) html+=stat("Recent move",(mv>0?"+":"")+mv+"%", mv<0?"var(--loss)":"var(--profit)");
+    html+=recentTrades(d);
     $("#item").innerHTML=html+"</div>";
+  }
+  function recentTrades(d){
+    if((!d.recent_buys||!d.recent_buys.length) && (!d.recent_sells||!d.recent_sells.length)) return "";
+    function col(rows){
+      if(!rows||!rows.length) return '<div class="quiet" style="font-size:10.5px">collecting…</div>';
+      return rows.map(function(r){
+        var t=new Date(r.at), hh=isNaN(t.getTime())?"":t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+        return '<div style="font-family:var(--mono);font-size:10.5px">'+(hh?'<span class="quiet">'+hh+'</span> ':"")+gp(r.price)+"</div>";
+      }).join("");
+    }
+    return '<div style="display:flex;gap:12px;margin-top:8px">'+
+      '<div style="flex:1"><div class="section-title" style="margin:0 0 3px">Last 3 buys</div>'+col(d.recent_buys)+"</div>"+
+      '<div style="flex:1"><div class="section-title" style="margin:0 0 3px">Last 3 sells</div>'+col(d.recent_sells)+"</div>"+
+    "</div>";
   }
   function stat(label,val,color){
     return '<div class="stat"><span>'+label+'</span><b'+(color?' style="color:'+color+'"':"")+">"+val+"</b></div>";
