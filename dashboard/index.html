@@ -118,6 +118,7 @@
 
   <div class="card">
     <div class="sec-title">🎰 Your GE slots</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
     <div id="slots"><div class="faint">Loading…</div></div>
   </div>
 
@@ -330,7 +331,8 @@
     if(!filled.length){ el.innerHTML = '<div class="faint">No occupied slots. Report a buy/sell offer below with a slot number.</div>'; return; }
     var rows = filled.map(function(x){
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
-      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+'</td><td class="faint">'+esc(x.account)+'</td>'+
+      var badge = x.likely_filled ? ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">✓ likely '+(x.stage==="selling"?"sold":"bought")+'</span>' : '';
+      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="faint">'+esc(x.account)+'</td>'+
         '<td style="text-align:right"><button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button></td></tr>';
     }).join("");
     el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Account</th><th></th></tr>'+rows+'</table>';
