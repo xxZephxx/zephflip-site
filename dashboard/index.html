@@ -375,7 +375,7 @@
       else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty; }
       else if(x.stage==="bought"){ offer = '<span class="faint">held'+qty+'</span>'; }
       else { offer = '<span class="faint">—</span>'; }
-      var cost = x.buy_price ? gp(x.buy_price) : '<span class="faint">—</span>';
+      var cost = x.cost ? gp(x.cost) : '<span class="faint" title="Report a Bought (NIB) for this item to set its cost">—</span>';
       // Slot number carries the account name on hover (slots 1-8 = account 1, 9-16 = 2, …).
       return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td>'+
         '<td style="text-align:right"><button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button></td></tr>';
