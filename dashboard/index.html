@@ -105,6 +105,11 @@
   </div>
 
   <div class="card">
+    <div class="sec-title">🔭 Live alerts</div>
+    <div id="alerts"><div class="faint">Loading…</div></div>
+  </div>
+
+  <div class="card">
     <div class="sec-title">🔎 Item intelligence</div>
     <div class="row">
       <input id="q" class="grow" placeholder="look up items — comma-separated, up to 8 (e.g. tume light, ek-zekkil)" autocomplete="off">
@@ -137,17 +142,6 @@
     <div class="sec-title">🎰 Your GE slots</div>
     <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
     <div id="slots"><div class="faint">Loading…</div></div>
-  </div>
-
-  <div class="grid2">
-    <div class="card">
-      <div class="sec-title">🔭 Live alerts</div>
-      <div id="alerts"><div class="faint">Loading…</div></div>
-    </div>
-    <div class="card">
-      <div class="sec-title">🏆 Season rank</div>
-      <div id="rankcard" class="faint">Loading…</div>
-    </div>
   </div>
 
   <div class="card">
@@ -188,6 +182,11 @@
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
   var gp = function(n){ return Number(n||0).toLocaleString(); };
+  var gpShort = function(n){ n = Number(n||0); var s = n<0?"-":""; n = Math.abs(n);
+    if(n>=1e9) return s+(n/1e9).toFixed(2).replace(/\.?0+$/,"")+"b";
+    if(n>=1e6) return s+(n/1e6).toFixed(1).replace(/\.?0+$/,"")+"m";
+    if(n>=1e3) return s+(n/1e3).toFixed(1).replace(/\.?0+$/,"")+"k";
+    return s+n; };
   var tier = null;
 
   function token(){ return localStorage.getItem(LS) || ""; }
@@ -344,11 +343,8 @@
 
   function renderRank(r){
     var info = r.rank;
-    var el = $("#rankcard");
-    if(!info || !info.rank){ el.innerHTML = '<span class="faint">No ranked flips this season yet.</span>'; $("#rank").textContent=""; return; }
-    el.innerHTML = '<div class="num" style="font-size:26px;font-weight:700">#'+info.rank+'</div>'+
-      '<div class="faint">'+esc(r.season)+' • '+gp(info.net_profit)+' gp profit</div>';
-    $("#rank").textContent = "Rank #"+info.rank+" · "+r.season;
+    if(!info || !info.rank){ $("#rank").textContent = ""; return; }
+    $("#rank").textContent = "🏆 Rank #"+info.rank+" · "+gpShort(info.net_profit)+" profit · "+r.season;
   }
 
   function renderAlerts(list){
