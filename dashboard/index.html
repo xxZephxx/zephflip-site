@@ -395,10 +395,18 @@
   function renderWatchlist(list){
     var manual = list.filter(function(w){ return !w.auto_slotted; });
     var el = $("#watchlist");
-    if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet.</div>'; return; }
-    el.innerHTML = '<table>'+manual.map(function(w){
-      return '<tr><td><b>'+esc(w.item_name)+'</b></td>'+
-        '<td class="faint">'+(w.enabled?"":"paused")+'</td>'+
+    if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement.</div>'; return; }
+    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th></th></tr>'+manual.map(function(w){
+      var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
+      var prices = (w.instant_sell!=null) ? gp(w.instant_sell)+' <span class="faint">→</span> '+gp(w.instant_buy) : '<span class="faint">—</span>';
+      var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gp(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
+      var move = (w.movement_pct!=null) ? '<span class="'+(w.movement_pct>=0?"profit":"loss")+'">'+(w.movement_pct>0?"+":"")+w.movement_pct+'%</span>' : '<span class="faint">—</span>';
+      var vol = (w.volume!=null) ? gp(w.volume)+'/h' : '<span class="faint">—</span>';
+      return '<tr><td><b>'+esc(w.item_name)+'</b>'+tag+'</td>'+
+        '<td class="num">'+prices+'</td>'+
+        '<td class="num">'+margin+'</td>'+
+        '<td class="num">'+move+'</td>'+
+        '<td class="num faint">'+vol+'</td>'+
         '<td style="text-align:right"><button class="btn-x" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
     }).join("")+'</table>';
     el.querySelectorAll(".btn-x").forEach(function(b){
