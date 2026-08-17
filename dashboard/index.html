@@ -455,8 +455,14 @@
           '</select>'+
           '<button class="btn btn-gold" data-set="'+x.g+'">Save</button>'+
           (cur?'<button class="btn-x" data-clear="'+x.g+'">Clear</button>':'')+
-        '</div></div>';
+        '</div>'+
+        (cur?'<div class="row" style="margin-top:8px"><button class="btn btn-ghost" data-matches="'+x.g+'">🔎 Find matches now</button></div>':'')+
+        '<div class="scout-matches" data-mg="'+x.g+'" style="margin-top:6px;overflow-x:auto"></div>'+
+        '</div>';
     }).join("");
+    $("#scout").querySelectorAll("[data-matches]").forEach(function(b){
+      b.onclick = function(){ loadScoutMatches(b.getAttribute("data-matches")); };
+    });
     $("#scout").querySelectorAll("[data-set]").forEach(function(b){
       b.onclick = function(){
         var g = b.getAttribute("data-set");
@@ -468,7 +474,7 @@
         api("/api/scout",{method:"POST",body:{group:g, cash:parseGp(cash), min_profit:mp?parseGp(mp):0,
           min_roi:roi?parseFloat(roi):0, min_volume:vol?parseInt(vol,10):1, volume_window:win}})
           .then(function(){ setStatus($("#s-status"),"🔭 "+g+" scout saved.","ok"); return api("/api/scout"); })
-          .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); })
+          .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); loadScoutMatches(g); })
           .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
       };
     });
@@ -480,6 +486,23 @@
           .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
       };
     });
+  }
+
+  function loadScoutMatches(g){
+    var el = $('#scout .scout-matches[data-mg="'+g+'"]'); if(!el) return;
+    el.innerHTML = '<div class="faint" style="font-size:12px">Scanning the market…</div>';
+    api("/api/scout/matches?group="+encodeURIComponent(g)).then(function(d){
+      if(!d.configured){ el.innerHTML = '<div class="faint" style="font-size:12px">Save this scout first, then find matches.</div>'; return; }
+      if(!d.matches.length){ el.innerHTML = '<div class="faint" style="font-size:12px">No matches right now with these filters — try a lower min margin or volume.</div>'; return; }
+      el.innerHTML = '<table style="font-size:13px"><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Vol</th><th>Grade</th></tr>'+
+        d.matches.map(function(m){
+          return '<tr><td><b>'+esc(m.item)+'</b></td>'+
+            '<td class="num">'+gpShort(m.buy)+' <span class="faint">→</span> '+gpShort(m.sell)+'</td>'+
+            '<td class="num"><b class="'+(m.margin>=0?"profit":"loss")+'">'+(m.margin>=0?"+":"")+gpShort(m.margin)+'</b> <span class="faint">· '+m.roi+'%</span></td>'+
+            '<td class="num faint">'+gpShort(m.volume)+'/h</td>'+
+            '<td class="faint">'+esc(m.grade)+' '+m.score+'</td></tr>';
+        }).join("")+'</table>';
+    }).catch(function(e){ el.innerHTML = '<div class="status err">'+esc(e.message)+'</div>'; });
   }
 
   // Full gp or shorthand (5b, 500m, 2.5b) -> integer gp. Bare number = millions.
