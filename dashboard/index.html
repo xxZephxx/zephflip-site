@@ -158,8 +158,11 @@
 
   <div class="card">
     <div class="sec-title">👀 Watchlist</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 8px">Get pinged when a flip on a watched item would net at least your profit / ROI. Leave blank for any move.</div>
     <div class="row">
       <input id="w-item" class="grow" placeholder="add an item to watch" autocomplete="off">
+      <input id="w-profit" placeholder="alert ≥ profit (e.g. 20m)" style="width:170px">
+      <input id="w-roi" placeholder="ROI %" style="width:84px">
       <button class="btn btn-gold" id="w-add">Watch</button>
     </div>
     <div class="status" id="w-status"></div>
@@ -392,23 +395,39 @@
     var manual = list.filter(function(w){ return !w.auto_slotted; });
     var el = $("#watchlist");
     if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement.</div>'; return; }
-    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th></th></tr>'+manual.map(function(w){
+    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th>Alert when ≥</th><th></th></tr>'+manual.map(function(w){
       var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
-      var prices = (w.instant_sell!=null) ? gp(w.instant_sell)+' <span class="faint">→</span> '+gp(w.instant_buy) : '<span class="faint">—</span>';
-      var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gp(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
+      var prices = (w.instant_sell!=null) ? gpShort(w.instant_sell)+' <span class="faint">→</span> '+gpShort(w.instant_buy) : '<span class="faint">—</span>';
+      var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gpShort(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
       var move = (w.movement_pct!=null) ? '<span class="'+(w.movement_pct>=0?"profit":"loss")+'">'+(w.movement_pct>0?"+":"")+w.movement_pct+'%</span>' : '<span class="faint">—</span>';
-      var vol = (w.volume!=null) ? gp(w.volume)+'/h' : '<span class="faint">—</span>';
+      var vol = (w.volume!=null) ? gpShort(w.volume)+'/h' : '<span class="faint">—</span>';
+      var pv = (w.min_net_profit && w.min_net_profit>0) ? w.min_net_profit : '';
+      var rv = (w.min_roi && w.min_roi>0) ? w.min_roi : '';
+      var alertCell = '<div class="row" style="gap:5px;flex-wrap:nowrap">'+
+        '<input class="w-p" value="'+pv+'" placeholder="profit" style="width:92px">'+
+        '<input class="w-r" value="'+rv+'" placeholder="ROI%" style="width:60px">'+
+        '<button class="btn-ghost w-save" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Save</button></div>';
       return '<tr><td><b>'+esc(w.item_name)+'</b>'+tag+'</td>'+
         '<td class="num">'+prices+'</td>'+
         '<td class="num">'+margin+'</td>'+
         '<td class="num">'+move+'</td>'+
         '<td class="num faint">'+vol+'</td>'+
-        '<td style="text-align:right"><button class="btn-x" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
+        '<td>'+alertCell+'</td>'+
+        '<td style="text-align:right"><button class="btn-x w-remove" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
     }).join("")+'</table>';
-    el.querySelectorAll(".btn-x").forEach(function(b){
+    el.querySelectorAll(".w-remove").forEach(function(b){
       b.onclick = function(){
         api("/api/watchlist",{method:"DELETE",body:{item:b.getAttribute("data-item")}})
           .then(function(){ api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
+          .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
+      };
+    });
+    el.querySelectorAll(".w-save").forEach(function(b){
+      b.onclick = function(){
+        var tr = b.closest("tr");
+        var p = tr.querySelector(".w-p").value.trim(), r = tr.querySelector(".w-r").value.trim();
+        api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):0, min_roi:r?parseFloat(r):0}})
+          .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
       };
     });
@@ -488,10 +507,11 @@
   $("#w-add").onclick = function(){
     var item = $("#w-item").value.trim();
     if(!item){ return; }
+    var p = $("#w-profit").value.trim(), r = $("#w-roi").value.trim();
     setStatus($("#w-status"),"Adding…");
-    api("/api/watchlist",{method:"POST",body:{item:item}}).then(function(){
+    api("/api/watchlist",{method:"POST",body:{item:item, min_profit:p?parseGp(p):0, min_roi:r?parseFloat(r):0}}).then(function(){
       setStatus($("#w-status"),"","");
-      $("#w-item").value="";
+      $("#w-item").value=""; $("#w-profit").value=""; $("#w-roi").value="";
       api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); });
     }).catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
   };
