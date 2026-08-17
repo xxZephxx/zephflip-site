@@ -104,17 +104,6 @@
     <button class="btn btn-ghost" id="logout">Log out</button>
   </div>
 
-  <div class="grid2">
-    <div class="card">
-      <div class="sec-title">🔭 Live alerts</div>
-      <div id="alerts"><div class="faint">Loading…</div></div>
-    </div>
-    <div class="card">
-      <div class="sec-title">🏆 Season rank</div>
-      <div id="rankcard" class="faint">Loading…</div>
-    </div>
-  </div>
-
   <div class="card">
     <div class="sec-title">🔎 Item intelligence</div>
     <div class="row">
@@ -122,24 +111,6 @@
       <button class="btn btn-ghost" id="q-go">Check</button>
     </div>
     <div id="quote" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <div class="sec-title">💼 Accounts &amp; cash</div>
-    <div id="accounts"><div class="faint">Loading…</div></div>
-    <div class="row" style="margin-top:10px">
-      <input id="a-name" placeholder="new account name" autocomplete="off">
-      <input id="a-cash" placeholder="starting cash (e.g. 5b)" autocomplete="off">
-      <button class="btn btn-ghost" id="a-add">Add account</button>
-    </div>
-    <div class="status" id="a-status"></div>
-    <div class="faint" id="portfolio" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <div class="sec-title">🎰 Your GE slots</div>
-    <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
-    <div id="slots"><div class="faint">Loading…</div></div>
   </div>
 
   <div class="card">
@@ -160,6 +131,35 @@
       <button class="btn btn-gold" id="r-submit">Submit</button>
     </div>
     <div class="status" id="r-status"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🎰 Your GE slots</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
+    <div id="slots"><div class="faint">Loading…</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title">🔭 Live alerts</div>
+      <div id="alerts"><div class="faint">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">🏆 Season rank</div>
+      <div id="rankcard" class="faint">Loading…</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">💼 Accounts &amp; cash</div>
+    <div id="accounts"><div class="faint">Loading…</div></div>
+    <div class="row" style="margin-top:10px">
+      <input id="a-name" placeholder="new account name" autocomplete="off">
+      <input id="a-cash" placeholder="starting cash (e.g. 5b)" autocomplete="off">
+      <button class="btn btn-ghost" id="a-add">Add account</button>
+    </div>
+    <div class="status" id="a-status"></div>
+    <div class="faint" id="portfolio" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -374,12 +374,14 @@
       var offer;
       if(x.stage==="buying" && x.offer_price){ offer = 'Buy <b>'+gp(x.offer_price)+'</b>'+qty; }
       else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty; }
-      else if(x.stage==="bought" && x.buy_price){ offer = '<span class="faint">held · cost '+gp(x.buy_price)+qty+'</span>'; }
+      else if(x.stage==="bought"){ offer = '<span class="faint">held'+qty+'</span>'; }
       else { offer = '<span class="faint">—</span>'; }
-      return '<tr><td class="num">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="faint">'+esc(x.account)+'</td>'+
+      var cost = x.buy_price ? gp(x.buy_price) : '<span class="faint">—</span>';
+      // Slot number carries the account name on hover (slots 1-8 = account 1, 9-16 = 2, …).
+      return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td><b>'+esc(x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td>'+
         '<td style="text-align:right"><button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button></td></tr>';
     }).join("");
-    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Account</th><th></th></tr>'+rows+'</table>';
+    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Cost</th><th></th></tr>'+rows+'</table>';
     el.querySelectorAll("[data-cancel]").forEach(function(b){
       b.onclick = function(){
         if(!confirm("Clear this slot?")) return;
