@@ -410,7 +410,7 @@
     });
   }
 
-  var GROUPS = [{g:"Supreme",tier:"zeus",market:"Olympian"},{g:"Elite",tier:"hades",market:"Stygian"},{g:"Bulk",tier:"poseidon",market:"Tidal"}];
+  var GROUPS = [{g:"Bulk",tier:"poseidon",market:"Tidal",emoji:"🌊"},{g:"Elite",tier:"hades",market:"Stygian",emoji:"💀"},{g:"Supreme",tier:"zeus",market:"Olympian",emoji:"⚡"}];
   var TIERRANK = { apollo:0, poseidon:1, hades:2, zeus:3 };
   function renderScoutForms(){
     if(tier===null) return;
@@ -421,7 +421,7 @@
     $("#scout").innerHTML = allowed.map(function(x){
       var cur = mine.filter(function(m){ return m.group===x.g; })[0];
       return '<div style="border-top:1px solid var(--line);padding:10px 0">'+
-        '<div class="row"><b>'+x.market+' Market</b>'+(cur?'<span class="pill">'+(cur.enabled?"active":"paused")+' · '+gp(cur.cash)+' gp</span>':'')+'</div>'+
+        '<div class="row"><b>'+x.emoji+' '+x.market+' Market</b>'+(cur?'<span class="pill">'+(cur.enabled?"active":"paused")+' · '+gp(cur.cash)+' gp</span>':'')+'</div>'+
         '<div class="row" style="margin-top:8px">'+
           '<input class="grow" data-g="'+x.g+'" data-f="cash" placeholder="budget (e.g. 5b)" value="'+(cur?cur.cash:"")+'">'+
           '<input data-g="'+x.g+'" data-f="min_profit" placeholder="min margin" value="'+(cur&&cur.min_profit?cur.min_profit:"")+'" style="width:110px">'+
