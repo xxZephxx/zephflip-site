@@ -356,7 +356,8 @@
     if(!list.length){ el.innerHTML = '<div class="faint">No active alerts — market is calm.</div>'; return; }
     el.innerHTML = list.map(function(a){
       var up = a.kind==="spike";
-      return '<div class="alert '+(up?"spike":"crash")+'"><b>'+esc(a.item)+'</b>'+
+      var tag = a.in_slot ? ' <span class="pill" style="font-size:10px">in slot</span>' : '';
+      return '<div class="alert '+(up?"spike":"crash")+'"><b>'+esc(a.item)+'</b>'+tag+
         '<span class="num '+(up?"profit":"loss")+'" style="margin-left:auto">'+(a.movement_pct>0?"+":"")+a.movement_pct+'%</span>'+
         '<span class="num faint">'+gp(a.price)+'</span></div>';
     }).join("");
