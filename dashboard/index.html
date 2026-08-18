@@ -345,9 +345,13 @@
   $("#q").addEventListener("keydown", function(e){ if(e.key==="Enter") lookup(); });
 
   function renderRank(r){
-    var info = r.rank;
-    if(!info || !info.rank){ $("#rank").textContent = ""; return; }
-    $("#rank").textContent = "🏆 Rank #"+info.rank+" · "+gpShort(info.net_profit)+" profit · "+r.season;
+    function pf(n){ return '<b class="'+(n>=0?"profit":"loss")+'">'+(n>=0?"+":"")+gpShort(n)+'</b>'; }
+    var month = (r.season||"Month").split(" ")[0];
+    var parts = [];
+    if(r.rank && r.rank.rank) parts.push("🏆 Rank #"+r.rank.rank);
+    if(r.daily_profit!=null) parts.push("Today "+pf(r.daily_profit));
+    if(r.monthly_profit!=null) parts.push(month+" "+pf(r.monthly_profit));
+    $("#rank").innerHTML = parts.join(' <span class="faint">·</span> ');
   }
 
   function renderAlerts(list){
