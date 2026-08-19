@@ -323,6 +323,8 @@
       .then(function(x){
         var j=x.j||{};
         if(!x.ok){ res.style.color="var(--loss)"; res.textContent="⚠️ "+(j.error||("HTTP "+x.status)); return; }
+        // Reset quantity/slot so a stale value can't carry into the next report.
+        $("#r-qty").value="1"; $("#r-slot").value="";
         if(j.action==="report"){
           if(j.quarantined){ res.style.color="var(--gold)"; res.textContent="⚠️ "+(j.warning||"Held for review."); }
           else { res.style.color="var(--profit)"; res.textContent="✅ Reported "+j.item+" — filed as "+(j.tier||"")+" market evidence."; }
