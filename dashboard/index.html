@@ -351,6 +351,7 @@
     if(r.rank && r.rank.rank) parts.push("🏆 Rank #"+r.rank.rank);
     if(r.daily_profit!=null) parts.push("Today "+pf(r.daily_profit));
     if(r.monthly_profit!=null) parts.push(month+" "+pf(r.monthly_profit));
+    if(r.all_time_profit!=null) parts.push("All-time "+pf(r.all_time_profit));
     $("#rank").innerHTML = parts.join(' <span class="faint">·</span> ');
   }
 
