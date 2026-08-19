@@ -528,7 +528,7 @@
     setStatus($("#r-status"),"Submitting…");
     api("/api/report",{method:"POST",body:body}).then(function(j){
       setStatus($("#r-status"), j.quarantined ? ("⚠️ "+(j.warning||"held for review")) : "✅ Reported.", j.quarantined?"":"ok");
-      $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value="";
+      $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1";
       api("/api/slots").then(renderSlots);
     }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
   };
