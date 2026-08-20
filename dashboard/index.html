@@ -175,6 +175,12 @@
     <div id="scout" style="margin-top:8px"></div>
     <div class="status" id="s-status"></div>
   </div>
+
+  <div class="card">
+    <div class="sec-title">📝 Notepad</div>
+    <textarea id="notepad" placeholder="Your private notes — flip targets, reminders, anything. Saves automatically." style="width:100%;min-height:130px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px 11px;font-size:14px;font-family:var(--sans);line-height:1.55"></textarea>
+    <div class="status" id="notes-status"></div>
+  </div>
 </div>
 
 <script>
@@ -252,6 +258,7 @@
       api("/api/slots").then(renderSlots).catch(function(){});
       api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
       api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
+      api("/api/notes").then(function(n){ $("#notepad").value = n.notes||""; }).catch(function(){});
       api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
       api("/api/portfolio").then(renderPortfolio).catch(function(){});
     }).catch(function(){});
@@ -533,6 +540,18 @@
       api("/api/slots").then(renderSlots);
     }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
   };
+
+  var _notesTimer = null;
+  $("#notepad").addEventListener("input", function(){
+    clearTimeout(_notesTimer);
+    setStatus($("#notes-status"), "Saving…");
+    _notesTimer = setTimeout(function(){
+      api("/api/notes",{method:"POST",body:{notes:$("#notepad").value}})
+        .then(function(){ setStatus($("#notes-status"),"Saved ✓","ok"); })
+        .catch(function(e){ setStatus($("#notes-status"), e.message, "err"); });
+    }, 800);
+  });
+
   $("#w-add").onclick = function(){
     var item = $("#w-item").value.trim();
     if(!item){ return; }
