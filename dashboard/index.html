@@ -431,7 +431,7 @@
       b.onclick = function(){
         var tr = b.closest("tr");
         var p = tr.querySelector(".w-p").value.trim(), r = tr.querySelector(".w-r").value.trim();
-        api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):0, min_roi:r?parseFloat(r):0}})
+        api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}})
           .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
       };
@@ -538,7 +538,7 @@
     if(!item){ return; }
     var p = $("#w-profit").value.trim(), r = $("#w-roi").value.trim();
     setStatus($("#w-status"),"Adding…");
-    api("/api/watchlist",{method:"POST",body:{item:item, min_profit:p?parseGp(p):0, min_roi:r?parseFloat(r):0}}).then(function(){
+    api("/api/watchlist",{method:"POST",body:{item:item, min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}}).then(function(){
       setStatus($("#w-status"),"","");
       $("#w-item").value=""; $("#w-profit").value=""; $("#w-roi").value="";
       api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); });
