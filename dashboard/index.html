@@ -478,9 +478,17 @@
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
       var badge = x.likely_filled ? ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">✓ likely '+(x.stage==="selling"?"sold":"bought")+'</span>' : '';
       var qty = x.quantity ? ' <span class="faint">×'+gp(x.quantity)+'</span>' : '';
+      // Confirmed partial-fill progress from reported NIB/NIS lots — so a buy
+      // offer for 2 that you've bought 1 of shows "1/2 bought", not a bare ×2.
+      function progPill(done, total, word){
+        return ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">'+gp(done)+'/'+gp(total)+' '+word+'</span>';
+      }
+      var prog = '';
+      if(x.stage==="buying" && x.bought>0){ prog = progPill(x.bought, x.quantity, "bought"); }
+      else if(x.stage==="selling" && x.sold>0){ prog = progPill(x.sold, x.quantity, "sold"); }
       var offer;
-      if(x.stage==="buying" && x.offer_price){ offer = 'Buy <b>'+gp(x.offer_price)+'</b>'+qty; }
-      else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty; }
+      if(x.stage==="buying" && x.offer_price){ offer = 'Buy <b>'+gp(x.offer_price)+'</b>'+qty+prog; }
+      else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty+prog; }
       else if(x.stage==="bought"){ offer = '<span class="faint">held'+qty+'</span>'; }
       else { offer = '<span class="faint">—</span>'; }
       var cost = x.cost ? gp(x.cost) : '<span class="faint" title="Report a Bought (NIB) for this item to set its cost">—</span>';
