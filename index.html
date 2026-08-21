@@ -186,6 +186,30 @@
   .tick .t-roi { font-variant-numeric: tabular-nums; font-weight: 600; }
   .tick .up { color: var(--profit); } .tick .down { color: var(--loss); }
 
+  /* ---- free price checker ---- */
+  .pc-band { border-bottom: 1px solid var(--line); background: var(--ground-2); }
+  .pc-wrap { max-width: 760px; margin: 0 auto; padding: 40px 22px 46px; text-align: center; }
+  .pc-form { display: flex; gap: 10px; max-width: 520px; margin: 20px auto 0; }
+  .pc-form input { flex: 1; min-width: 0; padding: 13px 15px; border-radius: 11px; border: 1px solid var(--line); background: var(--ground); color: var(--ink); font-size: 15px; font-family: inherit; }
+  .pc-form input:focus { outline: none; border-color: var(--amethyst); box-shadow: 0 0 0 3px color-mix(in srgb, var(--amethyst) 22%, transparent); }
+  .pc-form .btn { flex: 0 0 auto; }
+  .pc-status { color: var(--muted); font-size: 14px; margin-top: 14px; min-height: 20px; }
+  .pc-status.err { color: var(--loss); }
+  .pc-card { display: none; margin: 20px auto 0; max-width: 520px; border: 1px solid var(--line); border-radius: 14px; background: var(--ground); overflow: hidden; text-align: left; }
+  .pc-card.show { display: block; }
+  .pc-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--amethyst) 8%, transparent); }
+  .pc-card-head .pc-item { font-weight: 700; color: var(--ink); font-size: 16px; }
+  .pc-card-head .pc-vol { font-family: var(--mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .pc-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .pc-cell { padding: 15px 18px; border-right: 1px solid var(--line); }
+  .pc-cell:last-child { border-right: 0; }
+  .pc-cell .pc-lab { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--faint); }
+  .pc-cell .pc-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 17px; margin-top: 5px; color: var(--ink); }
+  .pc-cell .pc-val.pos { color: var(--profit); }
+  .pc-note { color: var(--faint); font-size: 12.5px; margin-top: 15px; }
+  .pc-note a { color: var(--amethyst-bright); }
+  @media (max-width: 560px) { .pc-form { flex-direction: column; } .pc-form .btn { width: 100%; } }
+
   /* ---- sections ---- */
   section.band { padding: 88px 0; }
   .sec-head { max-width: 60ch; margin-bottom: 46px; }
@@ -328,6 +352,32 @@
         </div>
       </div>
     </section>
+
+    <!-- FREE PRICE CHECKER -->
+    <div class="pc-band" id="pricecheck">
+      <div class="pc-wrap">
+        <span class="eyebrow">Try it free · no login</span>
+        <h2 style="font-size:clamp(26px,3.4vw,36px);margin:12px 0 0;line-height:1.12;">Check any item's live margin.</h2>
+        <p style="color:var(--muted);margin:12px 0 0;font-size:16px;">The same Grand Exchange intelligence Hermes runs on — buy price, sell price, margin after tax, and 24-hour volume.</p>
+        <form class="pc-form" id="pc-form" autocomplete="off">
+          <input id="pc-item" type="text" placeholder="e.g. Ek-ZekKil, Ancient hilt, Divine bowstring" aria-label="Item name">
+          <button class="btn btn-amethyst" type="submit">Check price</button>
+        </form>
+        <div class="pc-status" id="pc-status"></div>
+        <div class="pc-card" id="pc-card">
+          <div class="pc-card-head">
+            <span class="pc-item" id="pc-name"></span>
+            <span class="pc-vol" id="pc-vol"></span>
+          </div>
+          <div class="pc-grid">
+            <div class="pc-cell"><div class="pc-lab">Buy at</div><div class="pc-val" id="pc-buy"></div></div>
+            <div class="pc-cell"><div class="pc-lab">Sell at</div><div class="pc-val" id="pc-sell"></div></div>
+            <div class="pc-cell"><div class="pc-lab">Margin</div><div class="pc-val pos" id="pc-margin"></div></div>
+          </div>
+        </div>
+        <p class="pc-note">Prices are live from the RuneScape Wiki. Want ZephScore, alerts, and your own dashboard? <a href="#tiers">See the tiers →</a></p>
+      </div>
+    </div>
 
     <!-- FEATURES -->
     <section class="band" id="features">
@@ -548,27 +598,89 @@
     });
   })();
 
-  // ticker content
+  // Shared: ZephFlip public API + gp formatting
+  var API = 'https://zephflip-production.up.railway.app';
+  function gpFmt(n) { return (n == null) ? '—' : Number(n).toLocaleString('en-US'); }
+  function gpShort(n) {
+    if (n == null) return '—';
+    var a = Math.abs(n), s = n < 0 ? '-' : '';
+    if (a >= 1e9) return s + (a / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'b';
+    if (a >= 1e6) return s + (a / 1e6).toFixed(1).replace(/\.?0+$/, '') + 'm';
+    if (a >= 1e3) return s + Math.round(a / 1e3) + 'k';
+    return s + a;
+  }
+
+  // ticker content — live top margins, with a static fallback so it never looks dead
   (function () {
-    var items = [
+    var fallback = [
       ['Ek-ZekKil', '2,160,000,000', '+2.9%', 'up'],
       ['Bow of the Last Guardian', '1,569,894,994', '+1.9%', 'up'],
       ['Ancient hilt', '686,738,602', '+4.6%', 'up'],
-      ['Dark Shard of Leng', '517,640,481', '-1.5%', 'down'],
-      ['Divine bowstring', '515,000,000', '-9.4%', 'down'],
+      ['Dark Shard of Leng', '517,640,481', '+1.5%', 'up'],
+      ['Divine bowstring', '515,000,000', '+9.4%', 'up'],
       ['Fractured Armadyl symbol', '400,000,000', '+2.2%', 'up'],
       ['Elite sirenic chaps', '222,990,000', '+34.9%', 'up'],
       ['Enchantment of heroism', '75,895,000', '+88.7%', 'up'],
       ['Holly wreath', '18,990,000,000', '+4.6%', 'up'],
-      ['Vestments of havoc robe bottom', '317,000,000', '-3.1%', 'down']
+      ['Vestments of havoc robe bottom', '317,000,000', '+3.1%', 'up']
     ];
     function tick(it) {
       return '<span class="tick"><span class="t-name">' + it[0] + '</span>'
         + '<span class="t-price num">' + it[1] + '</span>'
         + '<span class="t-roi ' + it[3] + '">' + it[2] + '</span></span>';
     }
-    var one = items.map(tick).join('');
-    document.getElementById('track').innerHTML = one + one; // duplicate for seamless loop
+    function render(items) {
+      var one = items.map(tick).join('');
+      document.getElementById('track').innerHTML = one + one; // duplicate for seamless loop
+    }
+    render(fallback);
+    fetch(API + '/api/public/movers?limit=14').then(function (r) {
+      return r.ok ? r.json() : Promise.reject();
+    }).then(function (j) {
+      var movers = (j.movers || []).filter(function (m) { return m.sell && m.margin > 0; });
+      if (movers.length < 4) return; // keep the fallback if the board is thin
+      render(movers.map(function (m) {
+        var roi = (m.roi != null ? m.roi : 0);
+        return [m.item, gpFmt(m.sell), '+' + roi.toFixed(1) + '%', 'up'];
+      }));
+    }).catch(function () { /* keep the fallback */ });
+  })();
+
+  // free public price checker
+  (function () {
+    var form = document.getElementById('pc-form');
+    if (!form) return;
+    var input = document.getElementById('pc-item'),
+        status = document.getElementById('pc-status'),
+        card = document.getElementById('pc-card');
+    function setStatus(msg, err) { status.textContent = msg || ''; status.className = 'pc-status' + (err ? ' err' : ''); }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var item = input.value.trim();
+      if (!item) { setStatus('Type an item name to check.', true); return; }
+      setStatus('Checking the Grand Exchange…');
+      card.classList.remove('show');
+      fetch(API + '/api/public/quote?item=' + encodeURIComponent(item)).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+      }).then(function (x) {
+        if (!x.ok) { setStatus(x.status === 404 ? "No item by that name — check the spelling." : (x.j.error || 'Something went wrong.'), true); return; }
+        var d = x.j;
+        document.getElementById('pc-name').textContent = d.item;
+        document.getElementById('pc-vol').textContent = d.volume_24h != null ? (gpShort(d.volume_24h) + ' traded / 24h') : '';
+        document.getElementById('pc-buy').textContent = d.instant_sell != null ? gpFmt(d.instant_sell) : '—';
+        document.getElementById('pc-sell').textContent = d.instant_buy != null ? gpFmt(d.instant_buy) : '—';
+        var margin = document.getElementById('pc-margin');
+        if (d.complete && d.margin != null) {
+          margin.textContent = '+' + gpFmt(d.margin) + (d.roi != null ? '  (' + d.roi.toFixed(1) + '%)' : '');
+          margin.className = 'pc-val pos';
+        } else {
+          margin.textContent = 'thin market';
+          margin.className = 'pc-val';
+        }
+        setStatus('Live from the RuneScape Wiki · margin is after 2% GE tax.');
+        card.classList.add('show');
+      }).catch(function () { setStatus('Could not reach the price service — try again in a moment.', true); });
+    });
   })();
 
   // ambient west wind

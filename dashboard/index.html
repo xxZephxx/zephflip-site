@@ -105,6 +105,12 @@
   </div>
 
   <div class="card">
+    <div class="sec-title">📈 Performance</div>
+    <div id="perf-head" class="faint">Loading…</div>
+    <div id="perf-chart" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
     <div class="sec-title">🔭 Live alerts</div>
     <div id="alerts"><div class="faint">Loading…</div></div>
   </div>
@@ -142,6 +148,12 @@
     <div class="sec-title">🎰 Your GE slots</div>
     <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
     <div id="slots"><div class="faint">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">📒 Trade journal</div>
+    <div id="journal-head" class="faint">Loading…</div>
+    <div id="journal" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -254,6 +266,8 @@
       $("#tier").textContent = tier;
       renderScoutForms();
       api("/api/rank").then(renderRank).catch(function(){});
+      api("/api/profit-series?days=30").then(function(p){ renderProfitChart(p.series||[]); }).catch(function(){});
+      api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
       api("/api/alerts").then(function(a){ renderAlerts(a.alerts||[]); }).catch(function(){});
       api("/api/slots").then(renderSlots).catch(function(){});
       api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
@@ -360,6 +374,52 @@
     if(r.monthly_profit!=null) parts.push(month+" "+pf(r.monthly_profit));
     if(r.all_time_profit!=null) parts.push("All-time "+pf(r.all_time_profit));
     $("#rank").innerHTML = parts.join(' <span class="faint">·</span> ');
+  }
+
+  function renderProfitChart(series){
+    var head = $("#perf-head"), chart = $("#perf-chart");
+    if(!series.length){ head.textContent = "No completed flips yet — your daily realized profit will chart here."; chart.innerHTML=""; return; }
+    var total = series.reduce(function(s,d){ return s + d.profit; }, 0);
+    var best = series.reduce(function(a,b){ return b.profit>a.profit?b:a; }, series[0]);
+    var green = series.filter(function(d){ return d.profit>0; }).length;
+    function pf(n){ return '<b class="'+(n>=0?"profit":"loss")+'">'+(n>=0?"+":"")+gpShort(n)+'</b>'; }
+    head.innerHTML = "Last "+series.length+" days: "+pf(total)+
+      ' <span class="faint">·</span> Best day '+pf(best.profit)+
+      ' <span class="faint">·</span> '+green+" green day"+(green===1?"":"s");
+    // A compact daily P/L bar chart: green above the zero line, red below.
+    var W=320, H=64, pad=4, n=series.length, bw=(W-pad*2)/n;
+    var posMax=Math.max(0,best.profit), negMax=Math.max(0,-series.reduce(function(a,b){return b.profit<a.profit?b:a;},series[0]).profit);
+    var range=(posMax+negMax)||1, zeroY=pad+(posMax/range)*(H-pad*2);
+    var bars=series.map(function(d,i){
+      var x=pad+i*bw, h=Math.abs(d.profit)/range*(H-pad*2);
+      var y=d.profit>=0?(zeroY-h):zeroY, col=d.profit>=0?"var(--profit)":"var(--loss)";
+      var day=(d.date||"").slice(5);
+      return '<rect x="'+(x+0.5).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(bw-1,1).toFixed(1)+'" height="'+Math.max(h,d.profit?1:0).toFixed(1)+'" rx="1" fill="'+col+'"><title>'+day+': '+(d.profit>=0?"+":"")+gp(d.profit)+' gp</title></rect>';
+    }).join("");
+    chart.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" preserveAspectRatio="none" style="display:block">'+
+      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>'+bars+'</svg>';
+  }
+
+  function renderJournal(flips){
+    var head = $("#journal-head"), el = $("#journal");
+    if(!flips.length){ head.textContent = "No completed flips yet — matched buys and sells will log here."; el.innerHTML=""; return; }
+    var wins = flips.filter(function(f){ return f.net_profit>0; }).length;
+    var sum = flips.reduce(function(s,f){ return s+f.net_profit; }, 0);
+    function pf(n){ return '<b class="'+(n>=0?"profit":"loss")+'">'+(n>=0?"+":"")+gpShort(n)+'</b>'; }
+    head.innerHTML = flips.length+" recent flip"+(flips.length===1?"":"s")+" · "+
+      Math.round(wins/flips.length*100)+"% green · net "+pf(sum);
+    function when(at){ var d=new Date((at||"").replace(" ","T")+((at||"").indexOf("+")<0&&(at||"").indexOf("Z")<0?"Z":"")); return isNaN(d)?"" : d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+    el.innerHTML = '<div style="overflow-x:auto"><table><tr class="faint" style="font-size:12px">'+
+      '<th>Item</th><th>Qty</th><th style="text-align:right">Buy</th><th style="text-align:right">Sell</th><th style="text-align:right">P/L</th><th style="text-align:right">ROI</th><th style="text-align:right">When</th></tr>'+
+      flips.map(function(f){
+        return '<tr><td><b>'+esc(f.item)+'</b></td>'+
+          '<td class="num">'+gp(f.quantity)+'</td>'+
+          '<td class="num" style="text-align:right">'+gpShort(f.buy_price)+'</td>'+
+          '<td class="num" style="text-align:right">'+gpShort(f.sell_price)+'</td>'+
+          '<td class="num" style="text-align:right">'+pf(f.net_profit)+'</td>'+
+          '<td class="num '+(f.net_profit>=0?"profit":"loss")+'" style="text-align:right">'+(f.roi!=null?(f.roi>=0?"+":"")+f.roi.toFixed(1)+"%":"—")+'</td>'+
+          '<td class="faint" style="text-align:right;white-space:nowrap">'+when(f.at)+'</td></tr>';
+      }).join("")+'</table></div>';
   }
 
   function renderAlerts(list){

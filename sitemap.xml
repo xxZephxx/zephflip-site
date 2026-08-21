@@ -1,11 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://zephflip.com/</loc><lastmod>2026-08-12</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://zephflip.com/guides/</loc><lastmod>2026-08-12</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://zephflip.com/guides/how-to-flip-rs3</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
-  <url><loc>https://zephflip.com/guides/grand-exchange-tax</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
-  <url><loc>https://zephflip.com/guides/best-items-to-flip</loc><lastmod>2026-08-11</lastmod><priority>0.7</priority></url>
-  <url><loc>https://zephflip.com/guides/how-to-spot-a-price-crash</loc><lastmod>2026-08-12</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/</loc><lastmod>2026-08-20</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://zephflip.com/items/</loc><lastmod>2026-08-20</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://zephflip.com/guides/</loc><lastmod>2026-08-20</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://zephflip.com/guides/how-to-flip-rs3</loc><lastmod>2026-08-20</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/grand-exchange-tax</loc><lastmod>2026-08-20</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/best-items-to-flip</loc><lastmod>2026-08-20</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/guides/how-to-spot-a-price-crash</loc><lastmod>2026-08-20</lastmod><priority>0.7</priority></url>
+  <url><loc>https://zephflip.com/dashboard/</loc><lastmod>2026-08-20</lastmod><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/ek-zekkil</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/ancient-hilt</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/divine-bowstring</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/elder-rune-bar</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/magic-logs</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/yew-logs</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/runite-ore</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/coal</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/dragon-bones</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/shark</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/grimy-ranarr-weed</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/grimy-snapdragon</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/grimy-torstol</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/prayer-potion-4</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/super-restore-4</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/saradomin-brew-4</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/overload-4</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/uncut-dragonstone</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/onyx</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://zephflip.com/item/crystal-key</loc><lastmod>2026-08-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://zephflip.com/terms.html</loc><priority>0.3</priority></url>
   <url><loc>https://zephflip.com/privacy.html</loc><priority>0.3</priority></url>
 </urlset>
