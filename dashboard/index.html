@@ -511,12 +511,15 @@
     el.querySelectorAll("[data-refresh]").forEach(function(b){
       b.onclick = function(){
         var cur = b.getAttribute("data-qty");
-        var q = prompt("How many are on this offer? (fixes the quantity and clears any phantom fill progress)", cur);
+        var q = prompt("How many are on this offer?\n\nThis corrects the ×quantity and clears any phantom fill progress. It does NOT change a slot's side — to turn a Buy into a Sell (or the reverse), use Cancel and re-place the offer.", cur);
         if(q===null) return;  // cancelled
         var n = parseInt(q,10);
         if(!(n>0)){ alert("Enter a whole number of 1 or more."); return; }
         api("/api/slots/refresh",{method:"POST",body:{flip_id:Number(b.getAttribute("data-refresh")), quantity:n}})
-          .then(function(){ api("/api/slots").then(renderSlots); })
+          .then(function(res){
+            api("/api/slots").then(renderSlots);
+            alert("✅ Slot set to ×"+(res.quantity!=null?res.quantity:n)+" and progress cleared.\n\nStill showing the wrong side (Buy vs Sell)? That's a stage issue — hit Cancel on this slot and re-place your offer.");
+          })
           .catch(function(e){ alert(e.message); });
       };
     });
