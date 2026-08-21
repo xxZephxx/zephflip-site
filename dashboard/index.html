@@ -52,6 +52,11 @@
   .alert{display:flex;gap:8px;align-items:center;padding:8px 10px;margin:5px 0;border-radius:9px;
     background:var(--panel2);font-size:14px;}
   .spike{border-left:3px solid var(--profit);} .crash{border-left:3px solid var(--loss);}
+  .tabs{display:flex;gap:6px;margin:14px 0 4px;border-bottom:1px solid var(--line);}
+  .tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);
+    font-family:var(--sans);font-size:15px;font-weight:600;padding:10px 14px;cursor:pointer;margin-bottom:-1px;}
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--ink);border-bottom-color:var(--amethyst);}
   #login{max-width:440px;margin:12vh auto 0;text-align:center;padding:0 16px;}
   #login h1{justify-content:center;font-size:26px;margin-bottom:6px;}
   #login p{color:var(--muted);}
@@ -104,11 +109,12 @@
     <button class="btn btn-ghost" id="logout">Log out</button>
   </div>
 
-  <div class="card">
-    <div class="sec-title">📈 Performance</div>
-    <div id="perf-head" class="faint">Loading…</div>
-    <div id="perf-chart" style="margin-top:10px"></div>
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="tab-btn-trade" role="tab" aria-selected="true">🎰 Trading desk</button>
+    <button class="tab" id="tab-btn-stats" role="tab" aria-selected="false">📈 Performance</button>
   </div>
+
+  <div id="tab-trade">
 
   <div class="card">
     <div class="sec-title">🔭 Live alerts</div>
@@ -151,12 +157,6 @@
   </div>
 
   <div class="card">
-    <div class="sec-title">📒 Trade journal</div>
-    <div id="journal-head" class="faint">Loading…</div>
-    <div id="journal" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
     <div class="sec-title">💼 Accounts &amp; cash</div>
     <div id="accounts"><div class="faint">Loading…</div></div>
     <div class="row" style="margin-top:10px">
@@ -193,6 +193,24 @@
     <textarea id="notepad" placeholder="Your private notes — flip targets, reminders, anything. Saves automatically." style="width:100%;min-height:130px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px 11px;font-size:14px;font-family:var(--sans);line-height:1.55"></textarea>
     <div class="status" id="notes-status"></div>
   </div>
+
+  </div><!-- /#tab-trade -->
+
+  <div id="tab-stats" class="hidden">
+
+  <div class="card">
+    <div class="sec-title">📈 Performance</div>
+    <div id="perf-head" class="faint">Loading…</div>
+    <div id="perf-chart" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">📒 Trade journal</div>
+    <div id="journal-head" class="faint">Loading…</div>
+    <div id="journal" style="margin-top:8px"></div>
+  </div>
+
+  </div><!-- /#tab-stats -->
 </div>
 
 <script>
@@ -245,6 +263,24 @@
   }
   $("#loginBtn").onclick = function(){ location.href = API + "/auth/login"; };
   $("#logout").onclick = function(){ localStorage.removeItem(LS); showLogin(); };
+
+  // Two tabs: the active trading desk, and the stats/performance view.
+  (function(){
+    function show(which){
+      var trade = which !== "stats";
+      $("#tab-trade").classList.toggle("hidden", !trade);
+      $("#tab-stats").classList.toggle("hidden", trade);
+      $("#tab-btn-trade").classList.toggle("active", trade);
+      $("#tab-btn-stats").classList.toggle("active", !trade);
+      $("#tab-btn-trade").setAttribute("aria-selected", trade);
+      $("#tab-btn-stats").setAttribute("aria-selected", !trade);
+      try { localStorage.setItem("zf_tab", which); } catch(e){}
+    }
+    $("#tab-btn-trade").onclick = function(){ show("trade"); };
+    $("#tab-btn-stats").onclick = function(){ show("stats"); };
+    var saved = "trade"; try { saved = localStorage.getItem("zf_tab") || "trade"; } catch(e){}
+    show(saved);
+  })();
 
   function showApp(){
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
