@@ -19,7 +19,7 @@
   body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;
     line-height:1.5;-webkit-font-smoothing:antialiased;}
   a{color:var(--amethyst);}
-  .wrap{max-width:900px;margin:0 auto;padding:20px 16px 60px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px;}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
     padding:16px 18px;margin-bottom:16px;}
   .sec-title{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
@@ -559,15 +559,15 @@
       var vol = (w.volume!=null) ? gpShort(w.volume)+'/h' : '<span class="faint">—</span>';
       var pv = (w.min_net_profit && w.min_net_profit>0) ? w.min_net_profit : '';
       var rv = (w.min_roi && w.min_roi>0) ? w.min_roi : '';
-      var alertCell = '<div class="row" style="gap:5px;flex-wrap:nowrap">'+
-        '<input class="w-p" value="'+pv+'" placeholder="profit" style="width:92px">'+
-        '<input class="w-r" value="'+rv+'" placeholder="ROI%" style="width:60px">'+
+      var alertCell = '<div class="row" style="gap:4px;flex-wrap:nowrap">'+
+        '<input class="w-p" value="'+pv+'" placeholder="profit" style="width:78px;padding:6px 8px">'+
+        '<input class="w-r" value="'+rv+'" placeholder="ROI%" style="width:52px;padding:6px 8px">'+
         '<button class="btn-ghost w-save" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Save</button></div>';
       var sv = (w.spike_threshold!=null) ? w.spike_threshold : '';
       var cv = (w.crash_threshold!=null) ? w.crash_threshold : '';
-      var threshCell = '<div class="row" style="gap:5px;flex-wrap:nowrap">'+
-        '<input class="w-crash" value="'+cv+'" placeholder="↓'+def+'" title="crash % — price drops this far" style="width:58px">'+
-        '<input class="w-spike" value="'+sv+'" placeholder="↑'+def+'" title="spike % — price jumps this far" style="width:58px">'+
+      var threshCell = '<div class="row" style="gap:4px;flex-wrap:nowrap">'+
+        '<input class="w-crash" value="'+cv+'" placeholder="↓'+def+'" title="crash % — price drops this far" style="width:48px;padding:6px 6px">'+
+        '<input class="w-spike" value="'+sv+'" placeholder="↑'+def+'" title="spike % — price jumps this far" style="width:48px;padding:6px 6px">'+
         '<button class="btn-ghost w-thresh" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Set</button></div>';
       return '<tr><td title="'+esc(w.item_name)+'"><b>'+esc(w.alias||w.item_name)+'</b>'+tag+'</td>'+
         '<td class="num">'+prices+'</td>'+
