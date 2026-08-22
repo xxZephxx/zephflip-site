@@ -376,10 +376,13 @@
       '<div><div class="faint" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">Last 3 instant sells</div>'+tradeList(d.recent_sells)+'</div>'+
     '</div>';
   }
+  function marketPill(d){
+    return d && d.market ? ' <span class="pill" style="color:var(--amethyst)">'+esc(d.market)+'</span>' : '';
+  }
   function quoteCard(d){
-    if(!d || !d.complete){ return '<div class="faint" style="margin-top:8px">'+esc((d&&d.item)||"item")+' — live price unavailable right now.'+recentBlock(d||{})+'</div>'; }
+    if(!d || !d.complete){ return '<div class="faint" style="margin-top:8px">'+esc((d&&d.item)||"item")+marketPill(d)+' — live price unavailable right now.'+recentBlock(d||{})+'</div>'; }
     return '<div style="background:var(--panel2);border-radius:10px;padding:12px 14px;margin-top:8px">'+
-      '<div style="font-weight:700;font-size:16px">'+esc(d.item)+(d.grade?' · <span class="pill">'+d.grade+' ('+d.zephscore+')</span>':'')+'</div>'+
+      '<div style="font-weight:700;font-size:16px">'+esc(d.item)+marketPill(d)+(d.grade?' · <span class="pill">'+d.grade+' ('+d.zephscore+')</span>':'')+'</div>'+
       '<div class="num" style="margin-top:4px">Buy <b>'+gp(d.instant_sell)+'</b> → Sell <b>'+gp(d.instant_buy)+'</b> gp</div>'+
       '<div class="num" style="margin-top:4px">Margin <b class="'+(d.margin>=0?"profit":"loss")+'">'+(d.margin>=0?"+":"")+gp(d.margin)+'</b> · ROI <b>'+d.roi+'%</b></div>'+
       '<div class="num faint" style="margin-top:4px;font-size:12px">Volume '+
@@ -656,8 +659,12 @@
     var slot = $("#r-slot").value.trim(); if(slot) body.slot = parseInt(slot,10);
     if(!body.item){ setStatus($("#r-status"),"Enter an item.","err"); return; }
     setStatus($("#r-status"),"Submitting…");
+    var entered = body.price;
     api("/api/report",{method:"POST",body:body}).then(function(j){
-      setStatus($("#r-status"), j.quarantined ? ("⚠️ "+(j.warning||"held for review")) : "✅ Reported.", j.quarantined?"":"ok");
+      var msg = j.quarantined ? ("⚠️ "+(j.warning||"held for review"))
+        : j.price_adjusted ? ("✅ Reported at "+gpShort(j.price)+" — read "+gp(entered)+" as "+gpShort(j.price)+".")
+        : "✅ Reported.";
+      setStatus($("#r-status"), msg, j.quarantined?"":"ok");
       $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1";
       api("/api/slots").then(renderSlots);
     }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
