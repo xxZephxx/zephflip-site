@@ -306,7 +306,7 @@
       api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
       api("/api/alerts").then(renderAlerts).catch(function(){});
       api("/api/slots").then(renderSlots).catch(function(){});
-      api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
+      api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }).catch(function(){});
       api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
       api("/api/notes").then(function(n){ $("#notepad").value = n.notes||""; }).catch(function(){});
       api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
@@ -552,7 +552,8 @@
     var manual = list.filter(function(w){ return !w.auto_slotted; });
     var el = $("#watchlist");
     if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement.</div>'; return; }
-    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th>Alert when ≥</th><th></th></tr>'+manual.map(function(w){
+    var def = window._watchDefault||10;
+    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+manual.map(function(w){
       var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
       var prices = (w.instant_sell!=null) ? gpShort(w.instant_sell)+' <span class="faint">→</span> '+gpShort(w.instant_buy) : '<span class="faint">—</span>';
       var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gpShort(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
@@ -564,18 +565,25 @@
         '<input class="w-p" value="'+pv+'" placeholder="profit" style="width:92px">'+
         '<input class="w-r" value="'+rv+'" placeholder="ROI%" style="width:60px">'+
         '<button class="btn-ghost w-save" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Save</button></div>';
+      var sv = (w.spike_threshold!=null) ? w.spike_threshold : '';
+      var cv = (w.crash_threshold!=null) ? w.crash_threshold : '';
+      var threshCell = '<div class="row" style="gap:5px;flex-wrap:nowrap">'+
+        '<input class="w-crash" value="'+cv+'" placeholder="↓'+def+'" title="crash % — price drops this far" style="width:58px">'+
+        '<input class="w-spike" value="'+sv+'" placeholder="↑'+def+'" title="spike % — price jumps this far" style="width:58px">'+
+        '<button class="btn-ghost w-thresh" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Set</button></div>';
       return '<tr><td title="'+esc(w.item_name)+'"><b>'+esc(w.alias||w.item_name)+'</b>'+tag+'</td>'+
         '<td class="num">'+prices+'</td>'+
         '<td class="num">'+margin+'</td>'+
         '<td class="num">'+move+'</td>'+
         '<td class="num faint">'+vol+'</td>'+
         '<td>'+alertCell+'</td>'+
+        '<td>'+threshCell+'</td>'+
         '<td style="text-align:right"><button class="btn-x w-remove" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
     }).join("")+'</table>';
     el.querySelectorAll(".w-remove").forEach(function(b){
       b.onclick = function(){
         api("/api/watchlist",{method:"DELETE",body:{item:b.getAttribute("data-item")}})
-          .then(function(){ api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
+          .then(function(){ api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
       };
     });
@@ -584,7 +592,16 @@
         var tr = b.closest("tr");
         var p = tr.querySelector(".w-p").value.trim(), r = tr.querySelector(".w-r").value.trim();
         api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}})
-          .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }); })
+          .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
+          .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
+      };
+    });
+    el.querySelectorAll(".w-thresh").forEach(function(b){
+      b.onclick = function(){
+        var tr = b.closest("tr");
+        var s = tr.querySelector(".w-spike").value.trim(), c = tr.querySelector(".w-crash").value.trim();
+        api("/api/watchlist/thresholds",{method:"POST",body:{item:b.getAttribute("data-item"), spike:s?parseFloat(s):null, crash:c?parseFloat(c):null}})
+          .then(function(){ setStatus($("#w-status"),"Crash/spike % updated — blank uses the "+(window._watchDefault||10)+"% default.","ok"); api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
       };
     });
@@ -709,7 +726,7 @@
     api("/api/watchlist",{method:"POST",body:{item:item, min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}}).then(function(){
       setStatus($("#w-status"),"","");
       $("#w-item").value=""; $("#w-profit").value=""; $("#w-roi").value="";
-      api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); });
+      api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); });
     }).catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
   };
 
