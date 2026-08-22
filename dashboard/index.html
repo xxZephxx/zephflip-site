@@ -67,7 +67,10 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   /* Wide tables scroll inside their card instead of spilling past the window. */
   #slots,#watchlist,#accounts{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  #slots table,#watchlist table{min-width:max-content;}
+  #slots table{min-width:max-content;}
+  #watchlist table{width:100%;}
+  #watchlist td,#watchlist th{padding:7px 5px;}
+  #watchlist input{padding:6px 7px;}
   .num{white-space:nowrap;}
   @media(max-width:640px){
     .grid2{grid-template-columns:1fr;}
@@ -576,7 +579,7 @@
         '<td class="num faint">'+vol+'</td>'+
         '<td>'+alertCell+'</td>'+
         '<td>'+threshCell+'</td>'+
-        '<td style="text-align:right"><button class="btn-x w-remove" data-item="'+esc(w.item_name)+'">Remove</button></td></tr>';
+        '<td style="text-align:right"><button class="btn-x w-remove" title="Remove from watchlist" data-item="'+esc(w.item_name)+'" style="padding:5px 9px">✕</button></td></tr>';
     }).join("")+'</table>';
     el.querySelectorAll(".w-remove").forEach(function(b){
       b.onclick = function(){
