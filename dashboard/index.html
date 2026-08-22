@@ -170,11 +170,9 @@
 
   <div class="card">
     <div class="sec-title">👀 Watchlist</div>
-    <div class="faint" style="font-size:12px;margin:-4px 0 8px">Get pinged when a flip on a watched item would net at least your profit / ROI. Leave blank for any move.</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 8px">Add an item, then tune it on its row: an <b>Alert when ≥</b> profit / ROI, and a <b>Crash / Spike %</b> to get DMed when its price makes a big move. Leave a field blank for any move.</div>
     <div class="row">
       <input id="w-item" class="grow" placeholder="add an item to watch" autocomplete="off">
-      <input id="w-profit" placeholder="alert ≥ profit (e.g. 20m)" style="width:170px">
-      <input id="w-roi" placeholder="ROI %" style="width:84px">
       <button class="btn btn-gold" id="w-add">Watch</button>
     </div>
     <div class="status" id="w-status"></div>
@@ -551,7 +549,7 @@
   function renderWatchlist(list){
     var manual = list.filter(function(w){ return !w.auto_slotted; });
     var el = $("#watchlist");
-    if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement.</div>'; return; }
+    if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement, then set a crash/spike % on its row.</div>'; return; }
     var def = window._watchDefault||10;
     el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+manual.map(function(w){
       var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
@@ -721,11 +719,10 @@
   $("#w-add").onclick = function(){
     var item = $("#w-item").value.trim();
     if(!item){ return; }
-    var p = $("#w-profit").value.trim(), r = $("#w-roi").value.trim();
     setStatus($("#w-status"),"Adding…");
-    api("/api/watchlist",{method:"POST",body:{item:item, min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}}).then(function(){
-      setStatus($("#w-status"),"","");
-      $("#w-item").value=""; $("#w-profit").value=""; $("#w-roi").value="";
+    api("/api/watchlist",{method:"POST",body:{item:item, min_profit:null, min_roi:null}}).then(function(){
+      setStatus($("#w-status"),"Added — set its alert %s on the row below.","ok");
+      $("#w-item").value="";
       api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); });
     }).catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
   };
