@@ -277,12 +277,14 @@
   }
 
   function renderHoldings(p){
-    var el=$("#holdings"); var list=(p&&p.positions)||[];
-    if(!list.length){ el.innerHTML='<div class="quiet">No bought items yet.</div>'; return; }
+    // Only items actually bought and held — exclude resting PB buy offers
+    // ('buying') and PS sell offers ('selling').
+    var el=$("#holdings");
+    var list=((p&&p.positions)||[]).filter(function(x){ return x.stage==="bought"; });
+    if(!list.length){ el.innerHTML='<div class="quiet">No bought items held right now.</div>'; return; }
     el.innerHTML=list.map(function(x){
-      var stage = x.stage==="selling" ? ' <span class="hint">selling</span>' : '';
       return '<div class="alert" style="border-left:3px solid var(--gold);border-radius:0 8px 8px 0">'+
-        '<span style="flex:1">'+escapeHtml(x.item)+' <span class="hint">×'+gp(x.quantity)+'</span>'+stage+'</span>'+
+        '<span style="flex:1">'+escapeHtml(x.item)+' <span class="hint">×'+gp(x.quantity)+'</span></span>'+
         '<span class="hint">@ '+gp(x.buy_price)+'</span></div>';
     }).join("");
   }
