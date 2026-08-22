@@ -633,7 +633,7 @@
           return '<tr><td><b>'+esc(m.item)+'</b></td>'+
             '<td class="num">'+gpShort(m.buy)+' <span class="faint">→</span> '+gpShort(m.sell)+'</td>'+
             '<td class="num"><b class="'+(m.margin>=0?"profit":"loss")+'">'+(m.margin>=0?"+":"")+gpShort(m.margin)+'</b> <span class="faint">· '+m.roi+'%</span></td>'+
-            '<td class="num faint">'+gpShort(m.volume)+'/h</td>'+
+            '<td class="num faint">'+gpShort(m.volume)+'/'+(m.volume_window||'1h')+'</td>'+
             '<td class="faint">'+esc(m.grade)+' '+m.score+'</td></tr>';
         }).join("")+'</table>';
     }).catch(function(e){ el.innerHTML = '<div class="status err">'+esc(e.message)+'</div>'; });
