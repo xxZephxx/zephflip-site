@@ -218,7 +218,7 @@
 
   function poll(){
     setStatus("Refreshing…");
-    Promise.all([api("/api/rank"), api("/api/alerts"), api("/api/portfolio").catch(function(){return {};})]).then(function(r){
+    Promise.all([api("/api/rank"), api("/api/alerts"), api("/api/inventory").catch(function(){return {};})]).then(function(r){
       renderRank(r[0]); renderAlerts(r[1]); renderHoldings(r[2]||{});
       if(lastItem) return api("/api/quote?item="+encodeURIComponent(lastItem)).then(renderItem);
     }).then(function(){
@@ -277,11 +277,10 @@
   }
 
   function renderHoldings(p){
-    // Only items actually bought and held — exclude resting PB buy offers
-    // ('buying') and PS sell offers ('selling').
-    var el=$("#holdings");
-    var list=((p&&p.positions)||[]).filter(function(x){ return x.stage==="bought"; });
-    if(!list.length){ el.innerHTML='<div class="quiet">No bought items held right now.</div>'; return; }
+    // Open bought lots from recorded Bought (NIB/INB) reports with stock unsold —
+    // the true "items I bought", independent of GE slots / resting offers.
+    var el=$("#holdings"); var list=(p&&p.items)||[];
+    if(!list.length){ el.innerHTML='<div class="quiet">No open bought items.</div>'; return; }
     el.innerHTML=list.map(function(x){
       return '<div class="alert" style="border-left:3px solid var(--gold);border-radius:0 8px 8px 0">'+
         '<span style="flex:1">'+escapeHtml(x.item)+' <span class="hint">×'+gp(x.quantity)+'</span></span>'+
