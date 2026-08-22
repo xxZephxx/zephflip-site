@@ -304,7 +304,7 @@
       api("/api/rank").then(renderRank).catch(function(){});
       api("/api/profit-series?days=30").then(function(p){ renderProfitChart(p.series||[]); }).catch(function(){});
       api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
-      api("/api/alerts").then(function(a){ renderAlerts(a.alerts||[]); }).catch(function(){});
+      api("/api/alerts").then(renderAlerts).catch(function(){});
       api("/api/slots").then(renderSlots).catch(function(){});
       api("/api/watchlist").then(function(w){ renderWatchlist(w.watches||[]); }).catch(function(){});
       api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
@@ -461,16 +461,36 @@
       }).join("")+'</table></div>';
   }
 
-  function renderAlerts(list){
+  function timeAgo(s){
+    if(!s) return "";
+    var d = new Date(String(s).replace(" ","T")+((String(s).indexOf("Z")<0&&String(s).indexOf("+")<0)?"Z":""));
+    if(isNaN(d)) return "";
+    var sec = Math.max(0,(Date.now()-d.getTime())/1000);
+    if(sec<60) return "just now";
+    if(sec<3600) return Math.floor(sec/60)+"m ago";
+    if(sec<86400) return Math.floor(sec/3600)+"h ago";
+    return Math.floor(sec/86400)+"d ago";
+  }
+  function renderAlerts(a){
+    a = a || {};
+    var list = a.alerts || [], recent = a.recent || [];
     var el = $("#alerts");
-    if(!list.length){ el.innerHTML = '<div class="faint">No active alerts — market is calm.</div>'; return; }
-    el.innerHTML = list.map(function(a){
-      var up = a.kind==="spike";
-      var tag = a.in_slot ? ' <span class="pill" style="font-size:10px">in slot</span>' : '';
-      return '<div class="alert '+(up?"spike":"crash")+'"><b>'+esc(a.item)+'</b>'+tag+
-        '<span class="num '+(up?"profit":"loss")+'" style="margin-left:auto">'+(a.movement_pct>0?"+":"")+a.movement_pct+'%</span>'+
-        '<span class="num faint">'+gp(a.price)+'</span></div>';
-    }).join("");
+    var live = list.length ? list.map(function(al){
+      var up = al.kind==="spike";
+      var tag = al.in_slot ? ' <span class="pill" style="font-size:10px">in slot</span>' : '';
+      return '<div class="alert '+(up?"spike":"crash")+'"><b>'+esc(al.item)+'</b>'+tag+
+        '<span class="num '+(up?"profit":"loss")+'" style="margin-left:auto">'+(al.movement_pct>0?"+":"")+al.movement_pct+'%</span>'+
+        '<span class="num faint">'+gp(al.price)+'</span></div>';
+    }).join("") : '<div class="faint">No live moves on your watchlist or slots — market is calm.</div>';
+    var hist = "";
+    if(recent.length){
+      hist = '<div class="faint" style="margin-top:12px;font-size:11px;text-transform:uppercase;letter-spacing:.08em">📨 Recent from Hermes</div>'+
+        recent.map(function(r){
+          return '<div class="alert" style="border-left:3px solid var(--amethyst)"><span>'+esc(r.summary)+'</span>'+
+            '<span class="num faint" style="margin-left:auto;font-size:11px;white-space:nowrap">'+timeAgo(r.created_at)+'</span></div>';
+        }).join("");
+    }
+    el.innerHTML = live + hist;
   }
 
   function renderSlots(s){

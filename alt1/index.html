@@ -213,7 +213,7 @@
   function poll(){
     setStatus("Refreshing…");
     Promise.all([api("/api/rank"), api("/api/alerts")]).then(function(r){
-      renderRank(r[0]); renderAlerts(r[1].alerts||[]);
+      renderRank(r[0]); renderAlerts(r[1]);
       if(lastItem) return api("/api/quote?item="+encodeURIComponent(lastItem)).then(renderItem);
     }).then(function(){
       setStatus("Updated "+new Date().toLocaleTimeString(),"ok");
@@ -232,20 +232,42 @@
 
   function renderRank(r){
     var el=$("#rank");
-    if(r&&r.rank){ el.textContent="🏅 #"+r.rank.rank+" · "+gp(r.rank.net_profit); }
-    else { el.textContent="Unranked"; el.style.color="var(--faint)"; }
+    if(r && r.daily_profit!=null){
+      var d=r.daily_profit;
+      el.textContent="Today "+(d>=0?"+":"")+gp(d);
+      el.style.color = d>=0 ? "var(--profit)" : "var(--loss)";
+    } else { el.textContent="—"; el.style.color="var(--faint)"; }
   }
 
-  function renderAlerts(list){
+  function timeAgo(s){
+    if(!s) return "";
+    var d=new Date(String(s).replace(" ","T")+((String(s).indexOf("Z")<0&&String(s).indexOf("+")<0)?"Z":""));
+    if(isNaN(d)) return "";
+    var sec=Math.max(0,(Date.now()-d.getTime())/1000);
+    if(sec<60) return "now"; if(sec<3600) return Math.floor(sec/60)+"m";
+    if(sec<86400) return Math.floor(sec/3600)+"h"; return Math.floor(sec/86400)+"d";
+  }
+
+  function renderAlerts(a){
+    a=a||{}; var list=a.alerts||[], recent=a.recent||[];
     var el=$("#alerts");
-    if(!list.length){ el.innerHTML='<div class="quiet">No active alerts — market is calm.</div>'; return; }
-    el.innerHTML=list.map(function(a){
-      var crash=a.kind==="crash", color=crash?"var(--loss)":"var(--profit)", arrow=crash?"▼":"▲";
+    var live = list.length ? list.map(function(al){
+      var crash=al.kind==="crash", color=crash?"var(--loss)":"var(--profit)", arrow=crash?"▼":"▲";
       return '<div class="alert" style="border-left:3px solid '+color+';border-radius:0 8px 8px 0">'+
-        '<span class="pct" style="color:'+color+'">'+arrow+" "+Math.abs(a.movement_pct)+'%</span>'+
-        '<span style="flex:1">'+escapeHtml(a.item)+"</span>"+
-        '<span class="hint">'+gp(a.price)+"</span></div>";
-    }).join("");
+        '<span class="pct" style="color:'+color+'">'+arrow+" "+Math.abs(al.movement_pct)+'%</span>'+
+        '<span style="flex:1">'+escapeHtml(al.item)+"</span>"+
+        '<span class="hint">'+gp(al.price)+"</span></div>";
+    }).join("") : '<div class="quiet">No live moves — market is calm.</div>';
+    var hist = "";
+    if(recent.length){
+      hist='<div class="quiet" style="margin-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Recent from Hermes</div>'+
+        recent.map(function(rr){
+          return '<div class="alert" style="border-left:3px solid var(--amethyst);border-radius:0 8px 8px 0">'+
+            '<span style="flex:1">'+escapeHtml(rr.summary)+'</span>'+
+            '<span class="hint">'+timeAgo(rr.created_at)+'</span></div>';
+        }).join("");
+    }
+    el.innerHTML = live + hist;
   }
 
   function renderItem(d){
