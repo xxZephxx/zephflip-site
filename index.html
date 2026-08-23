@@ -185,8 +185,12 @@
   .tick .t-price { color: var(--muted); font-variant-numeric: tabular-nums; }
   .tick .t-roi { font-variant-numeric: tabular-nums; font-weight: 600; }
   .tick .up { color: var(--profit); } .tick .down { color: var(--loss); }
-  .tick .t-profit { color: var(--profit); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .tick .t-mkt { color: var(--faint); font-size: 12px; }
+  .hero-stat { margin-top: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .hero-stat[hidden] { display: none; }
+  .hero-stat-num { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--profit); font-size: clamp(28px, 4.4vw, 44px); line-height: 1; letter-spacing: -0.02em; }
+  .hero-stat-label { color: var(--muted); font-size: 14px; max-width: 15em; }
+  .hero-stat-sub { color: var(--faint); }
 
   /* ---- free price checker ---- */
   .pc-band { border-bottom: 1px solid var(--line); background: var(--ground-2); }
@@ -323,6 +327,10 @@
             <a class="btn btn-gold" href="https://discord.gg/sJrVg3zCfv" target="_blank" rel="noopener">Join the Discord →</a>
             <a class="btn btn-ghost" href="#pantheon">See the pantheon</a>
           </div>
+          <div class="hero-stat" id="hero-stat" hidden>
+            <span class="hero-stat-num num" id="proof-total">—</span>
+            <span class="hero-stat-label">gp flipped by the community<span class="hero-stat-sub" id="proof-flips-wrap"></span></span>
+          </div>
           <div class="assurances">
             <span>Every figure after the 2% GE tax</span>
             <span>Verify in-game, always</span>
@@ -355,14 +363,6 @@
         </div>
       </div>
     </section>
-
-    <!-- PROOF WALL — real anonymized member wins; hidden until the API returns some -->
-    <div class="ticker-band" id="proof-band" style="display:none">
-      <div class="ticker-head"><span class="eyebrow">Real member wins · flipped with Hermes</span></div>
-      <div class="ticker-mask">
-        <div class="ticker-track" id="proof-track"></div>
-      </div>
-    </div>
 
     <!-- FREE PRICE CHECKER -->
     <div class="pc-band" id="pricecheck">
@@ -658,24 +658,25 @@
     }).catch(function () { /* keep the fallback */ });
   })();
 
-  // proof wall — real anonymized member wins. No fabricated fallback: if there's
-  // nothing (or the API is down) the band stays hidden rather than faking proof.
+  // community total — one headline number on the hero. Hidden until it loads.
   (function () {
-    function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
-    function chip(f) {
-      return '<span class="tick"><span class="t-name">' + esc(f.item) + '</span>'
-        + '<span class="t-profit">+' + gpShort(f.net_profit) + '</span>'
-        + (f.roi != null ? '<span class="t-roi up">+' + f.roi.toFixed(1) + '%</span>' : '')
-        + (f.market ? '<span class="t-mkt">' + esc(f.market) + '</span>' : '') + '</span>';
+    var el = document.getElementById('proof-total');
+    if (!el) return;
+    function bigGp(n) {
+      var a = Math.abs(n);
+      if (a >= 1e12) return (n / 1e12).toFixed(2).replace(/\.?0+$/, '') + 't';
+      return gpShort(n);
     }
-    fetch(API + '/api/public/proof?limit=20').then(function (r) {
+    fetch(API + '/api/public/stats').then(function (r) {
       return r.ok ? r.json() : Promise.reject();
     }).then(function (j) {
-      var flips = (j.flips || []).filter(function (f) { return f.net_profit > 0; });
-      if (flips.length < 4) return; // stay hidden unless there's a real scroll of wins
-      var one = flips.map(chip).join('');
-      document.getElementById('proof-track').innerHTML = one + one; // seamless loop
-      document.getElementById('proof-band').style.display = '';
+      var total = Number(j.total_profit || 0);
+      if (total <= 0) return; // stay hidden until there's a real total
+      el.textContent = bigGp(total);
+      el.title = total.toLocaleString('en-US') + ' gp';
+      var flips = document.getElementById('proof-flips-wrap');
+      if (flips && j.flips) flips.textContent = ' · ' + Number(j.flips).toLocaleString('en-US') + ' flips tracked';
+      document.getElementById('hero-stat').hidden = false;
     }).catch(function () { /* stay hidden */ });
   })();
 
