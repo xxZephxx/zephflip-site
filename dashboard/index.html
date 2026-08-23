@@ -549,12 +549,30 @@
     });
   }
 
+  var WL_SORT_KEYS = { name:function(w){return (w.alias||w.item_name||"").toLowerCase();},
+    sell:function(w){return w.instant_sell;}, margin:function(w){return w.margin;},
+    move:function(w){return w.movement_pct;}, vol:function(w){return w.volume;} };
+  function sortWatches(rows){
+    var s = window._wlSort || (window._wlSort={key:"margin",dir:-1});
+    var get = WL_SORT_KEYS[s.key] || WL_SORT_KEYS.margin;
+    return rows.slice().sort(function(a,b){
+      var x=get(a), y=get(b);
+      // Missing values always sink to the bottom regardless of direction.
+      var xn=(x==null||x===""), yn=(y==null||y===""); if(xn&&yn)return 0; if(xn)return 1; if(yn)return -1;
+      if(typeof x==="string") return s.dir*x.localeCompare(y);
+      return s.dir*(x-y);
+    });
+  }
+  function wlTh(key,label,title){
+    var s = window._wlSort||{}; var arrow = s.key===key ? (s.dir<0?" ▼":" ▲") : "";
+    return '<th class="wl-sort" data-sort="'+key+'" style="cursor:pointer;user-select:none"'+(title?' title="'+title+'"':'')+'>'+label+arrow+'</th>';
+  }
   function renderWatchlist(list){
-    var manual = list.filter(function(w){ return !w.auto_slotted; });
+    var manual = sortWatches(list.filter(function(w){ return !w.auto_slotted; }));
     var el = $("#watchlist");
     if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement, then set a crash/spike % on its row.</div>'; return; }
     var def = window._watchDefault||10;
-    el.innerHTML = '<table><tr><th>Item</th><th>Buy → Sell</th><th>Margin</th><th>Move</th><th>Vol</th><th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+manual.map(function(w){
+    el.innerHTML = '<table><tr>'+wlTh("name","Item")+wlTh("sell","Buy → Sell")+wlTh("margin","Margin")+wlTh("move","Move")+wlTh("vol","Vol")+'<th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+manual.map(function(w){
       var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
       var prices = (w.instant_sell!=null) ? gpShort(w.instant_sell)+' <span class="faint">→</span> '+gpShort(w.instant_buy) : '<span class="faint">—</span>';
       var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gpShort(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
@@ -595,6 +613,17 @@
         api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}})
           .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
+      };
+    });
+    el.querySelectorAll(".wl-sort").forEach(function(th){
+      th.onclick = function(){
+        var key = th.getAttribute("data-sort");
+        var s = window._wlSort || {key:"margin",dir:-1};
+        // Same column toggles direction; a new column starts descending
+        // (text columns start A→Z).
+        if(s.key===key){ s.dir = -s.dir; } else { s.key = key; s.dir = (key==="name") ? 1 : -1; }
+        window._wlSort = s;
+        renderWatchlist(list);
       };
     });
     el.querySelectorAll(".w-thresh").forEach(function(b){
