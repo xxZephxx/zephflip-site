@@ -185,12 +185,13 @@
   .tick .t-price { color: var(--muted); font-variant-numeric: tabular-nums; }
   .tick .t-roi { font-variant-numeric: tabular-nums; font-weight: 600; }
   .tick .up { color: var(--profit); } .tick .down { color: var(--loss); }
-  .hero-stat { margin-top: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .hero-stat { margin-top: 26px; }
   .hero-stat[hidden] { display: none; }
-  .hero-stat-num { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
-    color: var(--profit); font-size: clamp(28px, 4.4vw, 44px); line-height: 1; letter-spacing: -0.02em; }
-  .hero-stat-label { color: var(--muted); font-size: 14px; max-width: 15em; }
-  .hero-stat-sub { color: var(--faint); }
+  .hero-stat-eyebrow { display: block; color: var(--gold); }
+  .hero-stat-num { display: block; font-family: var(--mono); font-weight: 800; font-variant-numeric: tabular-nums;
+    color: var(--profit); font-size: clamp(46px, 8.5vw, 84px); line-height: 1; letter-spacing: -0.03em; margin: 5px 0 3px;
+    text-shadow: 0 0 34px color-mix(in srgb, var(--profit) 30%, transparent); }
+  .hero-stat-label { display: block; color: var(--muted); font-size: 15px; }
 
   /* ---- free price checker ---- */
   .pc-band { border-bottom: 1px solid var(--line); background: var(--ground-2); }
@@ -328,8 +329,9 @@
             <a class="btn btn-ghost" href="#pantheon">See the pantheon</a>
           </div>
           <div class="hero-stat" id="hero-stat" hidden>
+            <span class="eyebrow hero-stat-eyebrow">⚜ Wealth won by the pantheon</span>
             <span class="hero-stat-num num" id="proof-total">—</span>
-            <span class="hero-stat-label">gp flipped by the community<span class="hero-stat-sub" id="proof-flips-wrap"></span></span>
+            <span class="hero-stat-label">gp flipped by the ZephFlip faithful</span>
           </div>
           <div class="assurances">
             <span>Every figure after the 2% GE tax</span>
@@ -674,8 +676,6 @@
       if (total <= 0) return; // stay hidden until there's a real total
       el.textContent = bigGp(total);
       el.title = total.toLocaleString('en-US') + ' gp';
-      var flips = document.getElementById('proof-flips-wrap');
-      if (flips && j.flips) flips.textContent = ' · ' + Number(j.flips).toLocaleString('en-US') + ' flips tracked';
       document.getElementById('hero-stat').hidden = false;
     }).catch(function () { /* stay hidden */ });
   })();
