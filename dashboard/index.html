@@ -516,14 +516,31 @@
       else if(x.stage==="bought"){ offer = '<span class="faint">held'+qty+'</span>'; }
       else { offer = '<span class="faint">—</span>'; }
       var cost = x.cost ? gp(x.cost) : '<span class="faint" title="Report a Bought (NIB) for this item to set its cost">—</span>';
+      // Live "age at this price" — how long the current offer has rested.
+      var age = (x.offer_at && (x.stage==="buying"||x.stage==="selling"))
+        ? '<span class="num age" data-age="'+esc(x.offer_at)+'" title="How long this offer has sat at this price"></span>'
+        : '<span class="faint">—</span>';
       // Slot number carries the account name on hover (slots 1-8 = account 1, 9-16 = 2, …).
-      return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td title="'+esc(x.item)+'"><b>'+esc(x.alias||x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td>'+
+      return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td title="'+esc(x.item)+'"><b>'+esc(x.alias||x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td><td class="num faint">'+age+'</td>'+
         '<td style="text-align:right;white-space:nowrap">'+
           '<button class="btn-ghost" data-refresh="'+x.flip_id+'" data-qty="'+(x.quantity||1)+'" title="Fix a stuck slot: correct the quantity and clear phantom fill progress" style="padding:5px 9px;font-size:12px;margin-right:6px">↻ Fix</button>'+
           '<button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button>'+
         '</td></tr>';
     }).join("");
-    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Cost</th><th></th></tr>'+rows+'</table>';
+    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Cost</th><th title="How long the offer has rested at this price">Age</th><th></th></tr>'+rows+'</table>';
+    // Live count-up of each offer's age; one shared ticker, reset on every render.
+    function tickAges(){
+      el.querySelectorAll(".age[data-age]").forEach(function(sp){
+        var t = Date.parse(sp.getAttribute("data-age"));
+        if(isNaN(t)) return;
+        var s = Math.max(0, Math.floor((Date.now()-t)/1000));
+        var d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60), sec=s%60;
+        sp.textContent = d>0 ? d+'d '+h+'h' : h>0 ? h+'h '+m+'m' : m>0 ? m+'m '+(sec<10?'0':'')+sec+'s' : sec+'s';
+      });
+    }
+    tickAges();
+    clearInterval(window._ageTimer);
+    window._ageTimer = setInterval(tickAges, 1000);
     el.querySelectorAll("[data-cancel]").forEach(function(b){
       b.onclick = function(){
         if(!confirm("Clear this slot?")) return;
