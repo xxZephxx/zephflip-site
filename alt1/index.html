@@ -206,14 +206,31 @@
   $("#r-submit").onclick=submitReport;
   $("#r-type").onchange=updateReportPrice;
 
-  function api(path){
+  function friendlyNetError(){
     var c=cfg();
-    return fetch(c.base+path,{headers:{"Authorization":"Bearer "+c.token}}).then(function(r){
-      if(r.status===401) throw new Error("Invalid token — re-run $link");
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      return r.json();
-    });
+    return new Error("Can't reach "+(c.base||"the API")+" — check the endpoint (run $link again).");
   }
+  // One fetch path for every call. A dropped connection becomes a plain-English
+  // "can't reach <URL>" hint instead of a bare "Failed to fetch", and a non-JSON
+  // body never throws a raw parser error at the member — the server's
+  // {"error": ...} message is shown when present, otherwise the HTTP status.
+  function req(path, opts){
+    var c=cfg();
+    opts=opts||{}; opts.headers=opts.headers||{};
+    opts.headers["Authorization"]="Bearer "+c.token;
+    return fetch(c.base+path, opts).catch(function(){ throw friendlyNetError(); })
+      .then(function(r){
+        return r.text().then(function(text){
+          var data=null;
+          if(text){ try{ data=JSON.parse(text); }catch(_e){ data=null; } }
+          if(r.status===401) throw new Error((data&&data.error)||"Invalid token — re-run $link");
+          if(!r.ok) throw new Error((data&&data.error)||("HTTP "+r.status));
+          if(data===null) throw new Error("Unexpected response from the server — try again.");
+          return data;
+        });
+      });
+  }
+  function api(path){ return req(path); }
   function setStatus(t,k){ var s=$("#status"),d=$("#dot"); s.textContent=t; s.className=k||""; d.className="dot "+(k||""); }
 
   function poll(){
@@ -355,14 +372,9 @@
     var body={type:$("#r-type").value,item:item,price:price,quantity:qty};
     if(slotv) body.slot=parseInt(slotv,10);
     res.style.color="var(--muted)"; res.textContent="Submitting…";
-    var c=cfg();
-    fetch(c.base+"/api/report",{method:"POST",
-      headers:{"Authorization":"Bearer "+c.token,"Content-Type":"application/json"},
-      body:JSON.stringify(body)})
-      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,status:r.status,j:j}; }); })
-      .then(function(x){
-        var j=x.j||{};
-        if(!x.ok){ res.style.color="var(--loss)"; res.textContent="⚠️ "+(j.error||("HTTP "+x.status)); return; }
+    req("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(body)})
+      .then(function(j){
         // Reset quantity/slot so a stale value can't carry into the next report.
         $("#r-qty").value="1"; $("#r-slot").value="";
         if(j.action==="report"){
