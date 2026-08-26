@@ -309,7 +309,7 @@
     if(!d){ return; }
     if(d.complete===false){ $("#item").innerHTML='<div class="quiet">No complete live price for '+escapeHtml(d.item||"")+" right now.</div>"; return; }
     lastQuote=d;
-    var mc=d.margin>0?"var(--profit)":"var(--loss)";
+    var mc=d.margin>=0?"var(--profit)":"var(--loss)";
     var mv=d.movement_pct;
     var html='<div class="card"><div class="itemname">'+escapeHtml(d.item)+"</div>"+
       '<div class="prices">Buy '+full(d.instant_sell)+" → Sell "+full(d.instant_buy)+"</div>"+
@@ -327,7 +327,9 @@
     function col(rows){
       if(!rows||!rows.length) return '<div class="quiet" style="font-size:10.5px">collecting…</div>';
       return rows.map(function(r){
-        var t=new Date(r.at), hh=isNaN(t.getTime())?"":t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+        var iso=String(r.at||"").replace(" ","T");
+        if(iso && !/Z|[+-]\d\d:?\d\d$/.test(iso)) iso+="Z";
+        var t=new Date(iso), hh=isNaN(t.getTime())?"":t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
         return '<div style="font-family:var(--mono);font-size:10.5px">'+(hh?'<span class="quiet">'+hh+'</span> ':"")+gp(r.price)+"</div>";
       }).join("");
     }
@@ -377,11 +379,12 @@
       .then(function(j){
         // Reset quantity/slot so a stale value can't carry into the next report.
         $("#r-qty").value="1"; $("#r-slot").value="";
+        var adjusted=j.price_adjusted&&j.price!=null?" (read your price as "+Number(j.price).toLocaleString()+" gp)":"";
         if(j.action==="report"){
           if(j.quarantined){ res.style.color="var(--gold)"; res.textContent="⚠️ "+(j.warning||"Held for review."); }
-          else { res.style.color="var(--profit)"; res.textContent="✅ Reported "+j.item+" — filed as "+(j.tier||"")+" market evidence."; }
-        } else if(j.action==="slot"){ var p=j.result||{}; res.style.color="var(--profit)"; res.textContent="✅ Slot "+p.global_slot+" → "+p.stage+"."; }
-        else { res.style.color="var(--profit)"; res.textContent="✅ Done."; }
+          else { res.style.color="var(--profit)"; res.textContent="✅ Reported "+j.item+adjusted+" — filed as "+(j.tier||"")+" market evidence."; }
+        } else if(j.action==="slot"){ var p=j.result||{}; res.style.color="var(--profit)"; res.textContent="✅ Slot "+p.global_slot+" → "+p.stage+adjusted+"."; }
+        else { res.style.color="var(--profit)"; res.textContent="✅ Done."+adjusted; }
         poll();
       })
       .catch(function(e){ res.style.color="var(--loss)"; res.textContent="⚠️ "+(e.message||"Failed"); });

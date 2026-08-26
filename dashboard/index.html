@@ -312,7 +312,11 @@
       api("/api/notes").then(function(n){ $("#notepad").value = n.notes||""; }).catch(function(){});
       api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
       api("/api/portfolio").then(renderPortfolio).catch(function(){});
-    }).catch(function(){});
+    }).catch(function(){
+      // API unreachable: say so instead of leaving every card on "Loading…".
+      var el = document.getElementById("name");
+      if (el) el.textContent = "Can't reach the ZephFlip API — it may be redeploying. Retrying won't hurt: refresh in a minute.";
+    });
   }
 
   function renderPortfolio(p){
@@ -366,7 +370,9 @@
   function tradeList(rows){
     if(!rows || !rows.length) return '<div class="num faint" style="font-size:12px">collecting…</div>';
     return rows.map(function(r){
-      var t = new Date(r.at), hh = isNaN(t.getTime()) ? "" : t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+      var iso = String(r.at||"").replace(" ","T");
+      if(iso && !/Z|[+-]\d\d:?\d\d$/.test(iso)) iso += "Z";
+      var t = new Date(iso), hh = isNaN(t.getTime()) ? "" : t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
       return '<div class="num" style="font-size:12px">'+(hh?'<span class="faint">'+hh+'</span> ':'')+'<b>'+gp(r.price)+'</b></div>';
     }).join("");
   }
@@ -692,7 +698,12 @@
         var roi = $('#scout [data-g="'+g+'"][data-f="min_roi"]').value.trim();
         var vol = $('#scout [data-g="'+g+'"][data-f="min_volume"]').value.trim();
         var win = $('#scout [data-g="'+g+'"][data-f="volume_window"]').value;
-        api("/api/scout",{method:"POST",body:{group:g, cash:parseGp(cash), min_profit:mp?parseGp(mp):0,
+        var cashGp = parseGp(cash);
+        if(typeof cashGp !== "number" || !(cashGp > 0)){
+          setStatus($("#s-status"), "Enter a cash budget — e.g. 500m or 2.1b.", "err");
+          return;
+        }
+        api("/api/scout",{method:"POST",body:{group:g, cash:cashGp, min_profit:mp?parseGp(mp):0,
           min_roi:roi?parseFloat(roi):0, min_volume:vol?parseInt(vol,10):1, volume_window:win}})
           .then(function(){ setStatus($("#s-status"),"🔭 "+g+" scout saved.","ok"); return api("/api/scout"); })
           .then(function(s){ window._scouts=s.scouts||[]; renderScoutForms(); loadScoutMatches(g); })

@@ -213,6 +213,7 @@
   .pc-cell .pc-lab { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--faint); }
   .pc-cell .pc-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 17px; margin-top: 5px; color: var(--ink); }
   .pc-cell .pc-val.pos { color: var(--profit); }
+  .pc-cell .pc-val.neg { color: var(--loss); }
   .pc-note { color: var(--faint); font-size: 12.5px; margin-top: 15px; }
   .pc-note a { color: var(--amethyst-bright); }
   @media (max-width: 560px) { .pc-form { flex-direction: column; } .pc-form .btn { width: 100%; } }
@@ -468,7 +469,7 @@
         <div class="sec-head">
           <span class="eyebrow">In-game overlay</span>
           <h2>ZephFlip, right on your screen.</h2>
-          <p>A free Alt1 Toolkit app that docks over RuneScape — live crash &amp; spike alerts, per-item flip intelligence, your leaderboard rank, and trade reporting, all without leaving the game.</p>
+          <p>A free Alt1 Toolkit app that docks over RuneScape — live crash &amp; spike alerts, per-item flip intelligence, your bought items and daily profit, and trade reporting, all without leaving the game.</p>
         </div>
         <div class="hero-cta">
           <a class="btn btn-gold" href="alt1://addapp/https://zephflip.com/alt1/appconfig.json">➕ Add to Alt1</a>
@@ -638,8 +639,9 @@
       ['Holly wreath', '18,990,000,000', '+4.6%', 'up'],
       ['Vestments of havoc robe bottom', '317,000,000', '+3.1%', 'up']
     ];
+    function escT(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function tick(it) {
-      return '<span class="tick"><span class="t-name">' + it[0] + '</span>'
+      return '<span class="tick"><span class="t-name">' + escT(it[0]) + '</span>'
         + '<span class="t-price num">' + it[1] + '</span>'
         + '<span class="t-roi ' + it[3] + '">' + it[2] + '</span></span>';
     }
@@ -705,8 +707,9 @@
         document.getElementById('pc-sell').textContent = d.instant_buy != null ? gpFmt(d.instant_buy) : '—';
         var margin = document.getElementById('pc-margin');
         if (d.complete && d.margin != null) {
-          margin.textContent = '+' + gpFmt(d.margin) + (d.roi != null ? '  (' + d.roi.toFixed(1) + '%)' : '');
-          margin.className = 'pc-val pos';
+          var sign = d.margin >= 0 ? '+' : '';
+          margin.textContent = sign + gpFmt(d.margin) + (d.roi != null ? '  (' + d.roi.toFixed(1) + '%)' : '');
+          margin.className = 'pc-val ' + (d.margin >= 0 ? 'pos' : 'neg');
         } else {
           margin.textContent = 'thin market';
           margin.className = 'pc-val';
