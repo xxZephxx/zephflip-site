@@ -241,7 +241,8 @@
     else if(params.get("error")){
       var msgs = { not_a_member:"That Discord account isn't a ZephFlip member yet.",
         needs_paid_tier:"The dashboard is a paid-tier perk. Ascend to 🌊 Poseidon, 💀 Hades, or ⚡ Zeus to unlock it — use $subscribe in Discord.",
-        login_expired:"Login expired — please try again.", discord_rejected:"Discord declined the login." };
+        login_expired:"Login expired — please try again.", discord_rejected:"Discord declined the login.",
+        cookies_required:"Your browser blocked the login cookie. Allow cookies for the API and start the login again from this page." };
       window._loginError = msgs[params.get("error")] || "Login failed. Try again.";
     }
     history.replaceState(null,"",location.pathname);
