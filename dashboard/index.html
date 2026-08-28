@@ -190,7 +190,7 @@
 
   <div class="card">
     <div class="sec-title">📉 Price trends</div>
-    <div class="faint" style="font-size:12px;margin:-4px 0 8px">See where an item sits against its usual range. One item charts live <b>buy &amp; sell</b> in gp — add a <b>threshold</b> (e.g. <span class="num">100m</span>) to watch a bounce level. Chart <b>up to 4 items</b> and they compare as <b>% change</b>, so a 1.6b weapon and a 70m platebody share one graph.</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 8px">See where an item sits against its <b>usual range</b> — one item charts live <b>buy &amp; sell</b> with the middle of its range shaded and the average marked, so "cheaper than usual" is visible at a glance. Add a <b>threshold</b> (e.g. <span class="num">100m</span>) to watch a bounce level, and <b>hover the chart</b> for exact prices. Chart <b>up to 4 items</b> and they compare as <b>% change</b>, so a 1.6b weapon and a 70m platebody share one graph.</div>
     <div class="row">
       <input id="t-item" class="grow" placeholder="item name — or tap a watchlist chip below" autocomplete="off">
       <button class="btn btn-gold" id="t-add">Chart</button>
@@ -530,7 +530,8 @@
       setStatus($("#t-status"),"No sampled history yet for "+skipped.join(", ")+" — it builds as items are watched and price-checked.","err");
       return;
     }
-    setStatus($("#t-status"), skipped.length?("No history yet for "+skipped.join(", ")+"."):"","");
+    var notes = [];
+    if(skipped.length) notes.push("No history yet for "+skipped.join(", ")+".");
     var single = usable.length===1;
     var W=640, H=200, padL=54, padR=10, padT=10, padB=20;
     var t0=Infinity, t1=-Infinity, lo=Infinity, hi=-Infinity;
@@ -563,10 +564,28 @@
     });});
     if(hi===lo){ hi+=1; lo-=1; }
     var span=hi-lo; lo-=span*0.06; hi+=span*0.06;
+    // The "usual range" for a single item: the middle half (25th-75th
+    // percentile) of its mid prices over the window, plus the average — so
+    // "lower than usual" is visible as the line sitting below the band.
+    var band=null;
+    if(single && usable[0].pts.length>=5){
+      var mids=usable[0].pts.map(function(p){return p.mid;}).sort(function(a,b){return a-b;});
+      function q(f){ return mids[Math.floor(f*(mids.length-1))]; }
+      band={ lo:q(0.25), hi:q(0.75),
+             avg:mids.reduce(function(s,v){return s+v;},0)/mids.length };
+    }
     function X(t){ return padL+(t-t0)/((t1-t0)||1)*(W-padL-padR); }
     function Y(v){ return padT+(1-(v-lo)/(hi-lo))*(H-padT-padB); }
     function fmtY(v){ return single ? gpShort(Math.round(v)) : ((v>=0?"+":"")+v.toFixed(1)+"%"); }
     var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block" preserveAspectRatio="none">';
+    if(band){
+      var by1=Y(band.hi), by2=Y(band.lo);
+      svg+='<rect x="'+padL+'" y="'+by1.toFixed(1)+'" width="'+(W-padL-padR)+'" height="'+Math.max(1,(by2-by1)).toFixed(1)+'" fill="var(--amethyst)" opacity="0.08"/>'
+         +'<text x="'+(W-padR-4)+'" y="'+(by1+10).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--amethyst)" opacity="0.7" font-family="var(--mono)">usual range</text>';
+      var ay=Y(band.avg);
+      svg+='<line x1="'+padL+'" y1="'+ay.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+ay.toFixed(1)+'" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3 4"/>'
+         +'<text x="'+(padL+4)+'" y="'+(ay-3).toFixed(1)+'" font-size="9" fill="var(--faint)" font-family="var(--mono)">avg '+gpShort(Math.round(band.avg))+'</text>';
+    }
     [0,0.5,1].forEach(function(f){
       var v=lo+(hi-lo)*f, y=Y(v);
       svg+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>'
@@ -589,13 +608,69 @@
          +'<circle cx="'+X(last.t).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3" fill="'+l.color+'"/>';
     });
     svg+='</svg>';
-    $("#t-chart").innerHTML=svg;
+    var box=$("#t-chart");
+    box.innerHTML=svg;
+    // State the hover readout needs to invert pixel → time → nearest points.
+    TREND.view={ single:single, lines:lines, t0:t0, t1:t1,
+      W:W, padL:padL, padR:padR, fmt:fmtY };
+    attachTrendOverlays(box);
+    // Honesty about coverage: our sampling only reaches back as far as we've
+    // been capturing each item — a "45d" chart drawn from 15 days of data
+    // must say so, or the "usual range" judgment it powers is misleading.
+    var spanDays=(t1-t0)/86400000, windowDays=TREND.hours/24;
+    if(spanDays < windowDays-1){
+      notes.push("History covers ~"+Math.max(1,Math.round(spanDays))+"d of the "
+        +Math.round(windowDays)+"d window so far — it keeps filling in while items stay watched.");
+    }
+    setStatus($("#t-status"), notes.join(" "), "");
     $("#t-legend").innerHTML=lines.map(function(l){
       var d=(l.delta>=0?"+":"")+l.delta.toFixed(1)+"%";
       return '<span style="font-size:12px"><span class="t-dot" style="background:'+l.color+'"></span>'
         +esc(l.name)+' <b class="num">'+gpShort(Math.round(l.current))+'</b> '
         +'<b class="'+(l.delta>=0?"profit":"loss")+'">'+d+'</b></span>';
     }).join("");
+  }
+
+  function attachTrendOverlays(box){
+    // Crosshair + readout live as siblings of the SVG; recreated per render
+    // (innerHTML wipes them), while the listeners bind once to the container.
+    box.style.position="relative";
+    var cross=document.createElement("div");
+    cross.style.cssText="position:absolute;top:0;bottom:0;width:1px;background:var(--faint);opacity:.55;display:none;pointer-events:none";
+    var tip=document.createElement("div");
+    tip.style.cssText="position:absolute;top:6px;padding:5px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-size:11.5px;line-height:1.55;display:none;pointer-events:none;white-space:nowrap;z-index:5";
+    box.appendChild(cross); box.appendChild(tip);
+    TREND.cross=cross; TREND.tip=tip;
+    if(box._trendHooked) return;
+    box._trendHooked=true;
+    function hide(){ if(TREND.cross){TREND.cross.style.display="none";} if(TREND.tip){TREND.tip.style.display="none";} }
+    function move(clientX){
+      var v=TREND.view, svgEl=box.querySelector("svg");
+      if(!v||!svgEl||!TREND.cross) return;
+      var r=svgEl.getBoundingClientRect();
+      if(!r.width) return;
+      var xv=(clientX-r.left)/r.width*v.W;
+      if(xv<v.padL||xv>v.W-v.padR){ hide(); return; }
+      var t=v.t0+(xv-v.padL)/((v.W-v.padL-v.padR)||1)*(v.t1-v.t0);
+      var rows=v.lines.map(function(l){
+        var best=l.pts[0];
+        for(var i=1;i<l.pts.length;i++){ if(Math.abs(l.pts[i].t-t)<Math.abs(best.t-t)) best=l.pts[i]; }
+        return '<span style="color:'+l.color+'">●</span> '+esc(l.name)+' <b class="num">'+v.fmt(best.v)+'</b>';
+      });
+      var d=new Date(t);
+      var when=d.toLocaleDateString(undefined,{month:"short",day:"numeric"})
+        +" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      TREND.tip.innerHTML='<span class="faint">'+when+'</span><br>'+rows.join("<br>");
+      var x=clientX-box.getBoundingClientRect().left;
+      TREND.cross.style.left=x+"px"; TREND.cross.style.display="block";
+      TREND.tip.style.display="block";
+      if(x>box.clientWidth/2){ TREND.tip.style.left=""; TREND.tip.style.right=(box.clientWidth-x+10)+"px"; }
+      else { TREND.tip.style.right=""; TREND.tip.style.left=(x+10)+"px"; }
+    }
+    box.addEventListener("mousemove",function(e){ move(e.clientX); });
+    box.addEventListener("mouseleave",hide);
+    box.addEventListener("touchstart",function(e){ if(e.touches[0]) move(e.touches[0].clientX); },{passive:true});
+    box.addEventListener("touchmove",function(e){ if(e.touches[0]) move(e.touches[0].clientX); },{passive:true});
   }
 
   function renderProfitChart(series){
