@@ -683,15 +683,19 @@
     var rows = filled.map(function(x){
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
       var badge = x.likely_filled ? ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">✓ likely '+(x.stage==="selling"?"sold":"bought")+'</span>' : '';
-      var qty = x.quantity ? ' <span class="faint">×'+gp(x.quantity)+'</span>' : '';
+      // The CURRENT offer's size (server-computed vs the re-arm baseline) —
+      // a slot that sold 1 of 2 then re-listed the last one reads ×1, not ×2.
+      var shown = (x.stage==="buying"||x.stage==="selling")
+        ? (x.offer_quantity!=null ? x.offer_quantity : x.quantity) : x.quantity;
+      var qty = shown ? ' <span class="faint">×'+gp(shown)+'</span>' : '';
       // Confirmed partial-fill progress from reported NIB/NIS lots — so a buy
       // offer for 2 that you've bought 1 of shows "1/2 bought", not a bare ×2.
       function progPill(done, total, word){
         return ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">'+gp(done)+'/'+gp(total)+' '+word+'</span>';
       }
       var prog = '';
-      if(x.stage==="buying" && x.bought>0){ prog = progPill(x.bought, x.quantity, "bought"); }
-      else if(x.stage==="selling" && x.sold>0){ prog = progPill(x.sold, x.quantity, "sold"); }
+      if(x.stage==="buying" && x.bought>0){ prog = progPill(x.bought, shown, "bought"); }
+      else if(x.stage==="selling" && x.sold>0){ prog = progPill(x.sold, shown, "sold"); }
       var offer;
       if(x.stage==="buying" && x.offer_price){ offer = 'Buy <b>'+gp(x.offer_price)+'</b>'+qty+prog; }
       else if(x.stage==="selling" && x.offer_price){ offer = 'Sell <b>'+gp(x.offer_price)+'</b>'+qty+prog; }
@@ -725,7 +729,7 @@
     window._ageTimer = setInterval(tickAges, 1000);
     el.querySelectorAll("[data-cancel]").forEach(function(b){
       b.onclick = function(){
-        if(!confirm("Clear this slot?")) return;
+        if(!confirm("Clear this slot? This only clears the slot display: reported buys stay in your profit ledger and cash is not refunded. If the BUY itself was wrong, void the report in Discord instead.")) return;
         api("/api/slots",{method:"DELETE",body:{flip_id:Number(b.getAttribute("data-cancel"))}})
           .then(function(){ api("/api/slots").then(renderSlots); reloadAccounts(); })
           .catch(function(e){ alert(e.message); });
