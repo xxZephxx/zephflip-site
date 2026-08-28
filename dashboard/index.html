@@ -709,7 +709,7 @@
       // Slot number carries the account name on hover (slots 1-8 = account 1, 9-16 = 2, …).
       return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td title="'+esc(x.item)+'"><b>'+esc(x.alias||x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td><td class="num faint">'+age+'</td>'+
         '<td style="text-align:right;white-space:nowrap">'+
-          '<button class="btn-ghost" data-refresh="'+x.flip_id+'" data-qty="'+(x.quantity||1)+'" title="Fix a stuck slot: correct the quantity and clear phantom fill progress" style="padding:5px 9px;font-size:12px;margin-right:6px">↻ Fix</button>'+
+          '<button class="btn-ghost" data-refresh="'+x.flip_id+'" data-qty="'+(x.quantity||1)+'" title="One-click fix: closes a fully-sold listing, collects a finished buy, corrects the quantity, clears phantom progress" style="padding:5px 9px;font-size:12px;margin-right:6px">↻ Fix</button>'+
           '<button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button>'+
         '</td></tr>';
     }).join("");
@@ -737,15 +737,18 @@
     });
     el.querySelectorAll("[data-refresh]").forEach(function(b){
       b.onclick = function(){
-        var cur = b.getAttribute("data-qty");
-        var q = prompt("How many are on this offer?\n\nThis corrects the ×quantity and clears any phantom fill progress. It does NOT change a slot's side — to turn a Buy into a Sell (or the reverse), use Cancel and re-place the offer.", cur);
-        if(q===null) return;  // cancelled
-        var n = parseInt(q,10);
-        if(!(n>0)){ alert("Enter a whole number of 1 or more."); return; }
-        api("/api/slots/refresh",{method:"POST",body:{flip_id:Number(b.getAttribute("data-refresh")), quantity:n}})
+        // One click, no questions: the server derives the correct state from
+        // your confirmed buys/sells — closes a fully-sold listing, collects a
+        // finished buy, snaps the ×quantity to reality, clears phantom progress.
+        api("/api/slots/refresh",{method:"POST",body:{flip_id:Number(b.getAttribute("data-refresh"))}})
           .then(function(res){
             api("/api/slots").then(renderSlots);
-            alert("✅ Slot set to ×"+(res.quantity!=null?res.quantity:n)+" and progress cleared.\n\nStill showing the wrong side (Buy vs Sell)? That's a stage issue — hit Cancel on this slot and re-place your offer.");
+            var msg;
+            if(res.closed){ msg = "✅ Everything on this lot had already sold — closed it and freed the slot."; }
+            else if(res.collected){ msg = "✅ This buy was fully bought — collected it and freed the slot. The items are held for your sale."; }
+            else if(res.changed_quantity){ msg = "✅ Corrected the slot to ×"+res.quantity+" and cleared phantom progress."; }
+            else { msg = "✅ Progress re-baselined. If the slot still looks wrong (side or item), hit Cancel and re-place the offer with PB/PS … slot N."; }
+            alert(msg);
           })
           .catch(function(e){ alert(e.message); });
       };
