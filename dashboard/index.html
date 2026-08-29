@@ -1030,6 +1030,19 @@
     }, 800);
   });
 
+  // Enter submits the form an input belongs to — no reaching for the button.
+  function enterSubmits(ids, buttonId){
+    ids.forEach(function(id){
+      var el = $(id); if(!el) return;
+      el.addEventListener("keydown", function(e){
+        if(e.key === "Enter"){ e.preventDefault(); $(buttonId).onclick(); }
+      });
+    });
+  }
+  enterSubmits(["#w-item"], "#w-add");
+  enterSubmits(["#a-name", "#a-cash"], "#a-add");
+  enterSubmits(["#r-item", "#r-price", "#r-qty", "#r-slot"], "#r-submit");
+
   $("#w-add").onclick = function(){
     var item = $("#w-item").value.trim();
     if(!item){ return; }
