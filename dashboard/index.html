@@ -198,7 +198,9 @@
       <button class="btn rng" data-h="504">21d</button>
       <button class="btn rng on" data-h="1080">45d</button>
       <input id="t-threshold" placeholder="threshold — e.g. 100m" style="width:160px" autocomplete="off">
+      <button class="btn" id="t-arm" title="Hermes DMs you when the charted item crosses this level — it re-arms after every touch">🔔 Alert at level</button>
     </div>
+    <div id="t-lvls" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
     <div class="status" id="t-status"></div>
     <div id="t-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px"></div>
     <div id="t-chart" style="margin-top:8px"></div>
@@ -491,12 +493,16 @@
       setStatus($("#t-status"),"",""); return;
     }
     setStatus($("#t-status"),"Loading history…","");
+    var levelsReq = api("/api/levels").then(function(r){ TREND.levels = r.levels||[]; })
+      .catch(function(){ TREND.levels = TREND.levels||[]; });
     Promise.all(TREND.items.map(function(name){
       return fetch(API+"/api/public/history?item="+encodeURIComponent(name)+"&hours="+TREND.hours)
         .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
         .then(function(j){ return {name:j.item||name, points:j.points||[]}; })
         .catch(function(){ return {name:name, points:[], failed:true}; });
-    })).then(drawTrends);
+    })).then(function(series){
+      return levelsReq.then(function(){ return series; });
+    }).then(drawTrends);
   }
 
   function tParse(at){
@@ -561,6 +567,10 @@
     // The "usual range" for a single item: the middle half (25th-75th
     // percentile) of its mid prices over the window, plus the average — so
     // "lower than usual" is visible as the line sitting below the band.
+    var myLevels = single
+      ? (TREND.levels||[]).filter(function(l){ return l.item===usable[0].name; })
+      : [];
+    myLevels.forEach(function(l){ if(l.level<lo)lo=l.level; if(l.level>hi)hi=l.level; });
     var band=null;
     if(single && usable[0].pts.length>=5){
       var mids=usable[0].pts.map(function(p){return p.mid;}).sort(function(a,b){return a-b;});
@@ -587,6 +597,11 @@
     });
     if(!single){ var zy=Y(0); if(zy>padT&&zy<H-padB)
       svg+='<line x1="'+padL+'" y1="'+zy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zy.toFixed(1)+'" stroke="var(--faint)" stroke-width="1" stroke-dasharray="2 3"/>'; }
+    myLevels.forEach(function(l){
+      var ly=Y(l.level);
+      svg+='<line x1="'+padL+'" y1="'+ly.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+ly.toFixed(1)+'" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="6 4"/>'
+         +'<text x="'+(padL+4)+'" y="'+(ly-3).toFixed(1)+'" font-size="9" fill="var(--gold)" font-family="var(--mono)">🔔 '+gpShort(l.level)+'</text>';
+    });
     if(single){
       var th2=parseGp($("#t-threshold").value.trim());
       if(typeof th2==="number" && th2>0){
@@ -623,7 +638,42 @@
         +esc(l.name)+' <b class="num">'+gpShort(Math.round(l.current))+'</b> '
         +'<b class="'+(l.delta>=0?"profit":"loss")+'">'+d+'</b></span>';
     }).join("");
+    renderLevelChips(myLevels);
   }
+
+  function renderLevelChips(myLevels){
+    var el = $("#t-lvls"); if(!el) return;
+    el.innerHTML = (myLevels||[]).map(function(l){
+      return '<span class="wchip" style="cursor:default">🔔 '
+        +(l.direction==="below"?"falls to ":"rises to ")+gpShort(l.level)
+        +' <span data-lvl-x="'+l.item_id+':'+l.level+'" style="cursor:pointer;color:var(--loss);margin-left:4px">✕</span></span>';
+    }).join("");
+    el.querySelectorAll("[data-lvl-x]").forEach(function(x){
+      x.onclick = function(){
+        var bits = x.getAttribute("data-lvl-x").split(":");
+        api("/api/levels",{method:"DELETE",body:{item_id:Number(bits[0]), level:Number(bits[1])}})
+          .then(function(){ setStatus($("#t-status"),"Level removed.","ok"); loadTrends(); })
+          .catch(function(e){ setStatus($("#t-status"),e.message,"err"); });
+      };
+    });
+  }
+
+  $("#t-arm").onclick = function(){
+    if(TREND.items.length!==1){
+      setStatus($("#t-status"),"Chart exactly one item to arm a level on it.","err"); return;
+    }
+    var th = parseGp($("#t-threshold").value.trim());
+    if(typeof th!=="number" || !(th>0)){
+      setStatus($("#t-status"),"Type a level first — e.g. 100m — then hit the bell.","err"); return;
+    }
+    api("/api/levels",{method:"POST",body:{item:TREND.items[0], level:th}})
+      .then(function(r){
+        setStatus($("#t-status"),"🎯 Hermes will DM you when "+r.item+" "
+          +(r.direction==="below"?"falls":"rises")+" to "+gpShort(r.level)+". It re-arms after every touch.","ok");
+        loadTrends();
+      })
+      .catch(function(e){ setStatus($("#t-status"),e.message,"err"); });
+  };
 
   function attachTrendOverlays(box){
     // Crosshair + readout live as siblings of the SVG; recreated per render
