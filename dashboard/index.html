@@ -41,6 +41,14 @@
   .rng{font-size:12px;padding:4px 10px}
   .rng.on{border-color:var(--amethyst);color:var(--amethyst)}
   .t-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+  /* Performance card: flex bar columns with a vertical total above each bar. */
+  .pchart{display:flex;gap:2px;align-items:stretch}
+  .pcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
+  .plbl{height:45px;margin-bottom:3px;writing-mode:vertical-rl;transform:rotate(180deg);
+    font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.03em;
+    overflow:hidden;white-space:nowrap;display:block}
+  .pbarw{position:relative;height:64px;width:100%;display:block}
+  .pbar{position:absolute;left:12%;right:12%;border-radius:2px;display:block}
   .btn-discord{background:#5865F2;color:#fff;font-size:16px;padding:13px 22px;border:none;
     display:inline-flex;align-items:center;gap:10px;}
   .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
@@ -727,18 +735,28 @@
     head.innerHTML = "Last "+series.length+" days: "+pf(total)+
       ' <span class="faint">·</span> Best day '+pf(best.profit)+
       ' <span class="faint">·</span> '+green+" green day"+(green===1?"":"s");
-    // A compact daily P/L bar chart: green above the zero line, red below.
-    var W=320, H=64, pad=4, n=series.length, bw=(W-pad*2)/n;
+    // Daily P/L bars with each day's TOTAL above its bar (vertical labels, so
+    // 30 days fit at any card width) — no more hovering to read a day.
+    var AH=64, LH=48;  // bar area + label lane heights
     var posMax=Math.max(0,best.profit), negMax=Math.max(0,-series.reduce(function(a,b){return b.profit<a.profit?b:a;},series[0]).profit);
-    var range=(posMax+negMax)||1, zeroY=pad+(posMax/range)*(H-pad*2);
-    var bars=series.map(function(d,i){
-      var x=pad+i*bw, h=Math.abs(d.profit)/range*(H-pad*2);
-      var y=d.profit>=0?(zeroY-h):zeroY, col=d.profit>=0?"var(--profit)":"var(--loss)";
+    var range=(posMax+negMax)||1, zero=(posMax/range)*AH;
+    var cols=series.map(function(d){
+      var h=Math.abs(d.profit)/range*AH;
+      var top=d.profit>=0?(zero-h):zero;
+      var col=d.profit>=0?"var(--profit)":"var(--loss)";
       var day=(d.date||"").slice(5);
-      return '<rect x="'+(x+0.5).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(bw-1,1).toFixed(1)+'" height="'+Math.max(h,d.profit?1:0).toFixed(1)+'" rx="1" fill="'+col+'"><title>'+day+': '+(d.profit>=0?"+":"")+gp(d.profit)+' gp</title></rect>';
+      var label=d.profit
+        ? '<span class="plbl" style="color:'+col+'">'+(d.profit>0?"+":"−")+gpShort(Math.abs(d.profit))+'</span>'
+        : '<span class="plbl"></span>';
+      return '<div class="pcol" title="'+esc(day)+': '+(d.profit>=0?"+":"")+gp(d.profit)+' gp">'
+        +label
+        +'<span class="pbarw"><span class="pbar" style="background:'+col
+        +';top:'+top.toFixed(1)+'px;height:'+Math.max(h,d.profit?1.5:0).toFixed(1)+'px"></span></span>'
+        +'</div>';
     }).join("");
-    chart.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" preserveAspectRatio="none" style="display:block">'+
-      '<line x1="'+pad+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+zeroY.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>'+bars+'</svg>';
+    chart.innerHTML='<div class="pchart" style="position:relative">'
+      +'<i style="position:absolute;left:0;right:0;top:'+(LH+zero).toFixed(1)+'px;border-top:1px solid var(--line)"></i>'
+      +cols+'</div>';
   }
 
   function renderJournal(flips){
