@@ -186,7 +186,7 @@
   </div>
 
   <div class="card">
-    <div class="sec-title">👀 Watchlist</div>
+    <div class="sec-title">👀 Watchlist <span id="w-updated" class="faint" style="float:right;font-weight:400;letter-spacing:0;text-transform:none;font-size:11px"></span></div>
     <div class="faint" style="font-size:12px;margin:-4px 0 8px">Add an item, then tune it on its row: an <b>Alert when ≥</b> profit / ROI, and a <b>Crash / Spike %</b> to get DMed when its price makes a big move. Leave a field blank for any move.</div>
     <div class="row">
       <input id="w-item" class="grow" placeholder="add an item to watch" autocomplete="off">
@@ -320,6 +320,24 @@
     $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
     loadAll();
   }
+
+  // Live data ages fast — refresh the market-facing cards every 75s so a
+  // tab left open all day never shows hours-old margins. Skips while the tab
+  // is hidden, while logged out, and while the member is editing a watchlist
+  // row (a re-render would wipe their typing).
+  setInterval(function(){
+    if(document.hidden) return;
+    if(!localStorage.getItem(LS)) return;
+    var active = document.activeElement;
+    if(active && active.closest && active.closest("#watchlist")) return;
+    api("/api/watchlist").then(function(w){
+      window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]);
+    }).catch(function(){});
+    api("/api/slots").then(renderSlots).catch(function(){});
+    api("/api/rank").then(renderRank).catch(function(){});
+    api("/api/alerts").then(renderAlerts).catch(function(){});
+    if(TREND.items.length) loadTrends();
+  }, 75000);
 
   function loadAll(){
     // Gate on the live tier first: the dashboard is a paid-tier perk, so a
@@ -913,6 +931,8 @@
   function renderWatchlist(list){
     window._watchRows = list;      // feeds the Price-trends quick-add chips
     trendChips();
+    var stamp = $("#w-updated");
+    if(stamp) stamp.textContent = "updated " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
     var manual = sortWatches(list.filter(function(w){ return !w.auto_slotted; }));
     var el = $("#watchlist");
     if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement, then set a crash/spike % on its row.</div>'; return; }
