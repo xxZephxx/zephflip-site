@@ -224,6 +224,14 @@
     <div class="status" id="s-status"></div>
   </div>
 
+  <div class="card" id="grades-card" hidden>
+    <div class="sec-title">⚡ Grade Search <span class="tier" style="background:rgba(230,197,131,.14);color:#e6c583">Zeus</span></div>
+    <div class="faint">Pick a ZephScore grade and see which live flips carry it right now. Margins are per single item.</div>
+    <div id="g-picker" style="margin:10px 0 4px"></div>
+    <div id="g-results"></div>
+    <div class="status" id="g-status"></div>
+  </div>
+
   <div class="card">
     <div class="sec-title">📝 Notepad</div>
     <textarea id="notepad" placeholder="Your private notes — flip targets, reminders, anything. Saves automatically." style="width:100%;min-height:130px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px 11px;font-size:14px;font-family:var(--sans);line-height:1.55"></textarea>
@@ -356,6 +364,7 @@
       $("#name").textContent = m.name || "Trader";
       $("#tier").textContent = tier;
       renderScoutForms();
+      renderGradeCard();
       api("/api/rank").then(renderRank).catch(function(){});
       api("/api/profit-series?days=30").then(function(p){ renderProfitChart(p.series||[]); }).catch(function(){});
       api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
@@ -841,6 +850,9 @@
     var rows = filled.map(function(x){
       var stage = { buying:"🟡 Buying", bought:"🔵 Bought", selling:"🟣 Selling" }[x.stage] || x.stage;
       var badge = x.likely_filled ? ' <span class="pill" style="background:rgba(88,196,132,.16);color:#69d391;border:1px solid rgba(88,196,132,.4)">✓ likely '+(x.stage==="selling"?"sold":"bought")+'</span>' : '';
+      // Personal/drop-noted lot: the slot is tracked normally, but the trade
+      // stays off the profit ledger and closes outright once collected.
+      if(x.personal){ badge += ' <span class="pill" title="Off the profit ledger — closes when collected" style="background:rgba(150,150,170,.14);color:#a9a9c2;border:1px solid rgba(150,150,170,.35)">personal</span>'; }
       // The CURRENT offer's size (server-computed vs the re-arm baseline) —
       // a slot that sold 1 of 2 then re-listed the last one reads ×1, not ×2.
       var shown = (x.stage==="buying"||x.stage==="selling")
@@ -1063,6 +1075,47 @@
           .catch(function(e){ setStatus($("#s-status"), e.message, "err"); });
       };
     });
+  }
+
+  // ⚡ Zeus-only grade search: pick a ZephScore grade, see the live flips
+  // carrying it. Hidden entirely below Zeus (the API 403s regardless).
+  function renderGradeCard(){
+    if(tier===null || TIERRANK[tier] < TIERRANK.zeus) return;
+    $("#grades-card").hidden = false;
+    var picker = $("#g-picker");
+    var grades = ["S+","A","B","C","D"];
+    picker.innerHTML = grades.map(function(g){
+      return '<button class="btn-ghost g-grade" data-grade="'+g+'" style="padding:6px 14px;margin-right:6px;font-weight:700">'+g+'</button>';
+    }).join("") +
+      '<select id="g-group" style="margin-left:8px"><option value="">All markets</option><option>Bulk</option><option>Elite</option><option>Supreme</option></select>';
+    picker.querySelectorAll(".g-grade").forEach(function(b){
+      b.onclick = function(){
+        picker.querySelectorAll(".g-grade").forEach(function(x){ x.style.borderColor=""; x.style.color=""; });
+        b.style.borderColor = "#e6c583"; b.style.color = "#e6c583";
+        window._gradeSel = b.getAttribute("data-grade");
+        loadGrades(window._gradeSel);
+      };
+    });
+    $("#g-group").onchange = function(){
+      if(window._gradeSel) loadGrades(window._gradeSel);
+    };
+  }
+
+  function loadGrades(grade){
+    var el = $("#g-results");
+    el.innerHTML = '<div class="faint" style="font-size:12px">Scanning the market for '+esc(grade)+' flips…</div>';
+    var group = $("#g-group") ? $("#g-group").value : "";
+    api("/api/grades?grade="+encodeURIComponent(grade)+(group?"&group="+encodeURIComponent(group):"")).then(function(d){
+      if(!d.matches.length){ el.innerHTML = '<div class="faint" style="font-size:12px">No '+esc(grade)+'-graded flips in the scan right now — grades move with the market.</div>'; return; }
+      el.innerHTML = '<table style="font-size:13px"><tr><th>Item</th><th>Buy → Sell</th><th>Margin each</th><th>Vol/h</th><th>Score</th></tr>'+
+        d.matches.map(function(m){
+          return '<tr><td><b>'+esc(m.item)+'</b></td>'+
+            '<td class="num">'+gpShort(m.buy)+' <span class="faint">→</span> '+gpShort(m.sell)+'</td>'+
+            '<td class="num"><b class="'+(m.margin>=0?"profit":"loss")+'">'+(m.margin>=0?"+":"")+gpShort(m.margin)+'</b> <span class="faint">· '+m.roi+'%</span></td>'+
+            '<td class="num faint">'+gpShort(m.volume)+'</td>'+
+            '<td class="faint">'+esc(m.grade)+' '+m.score+'</td></tr>';
+        }).join("")+'</table>';
+    }).catch(function(e){ el.innerHTML = '<div class="status err">'+esc(e.message)+'</div>'; });
   }
 
   function loadScoutMatches(g){
