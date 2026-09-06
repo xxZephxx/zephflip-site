@@ -138,6 +138,9 @@
         <input id="r-qty" placeholder="qty" value="1" style="width:52px">
         <input id="r-slot" placeholder="slot" style="width:52px">
       </div>
+      <div class="row">
+        <input id="r-notes" class="grow" placeholder="notes — personal · pvm drop · p2p" autocomplete="off" spellcheck="false">
+      </div>
       <button id="r-submit" class="btn2">Submit report</button>
       <div id="r-result"></div>
     </div>
@@ -373,6 +376,7 @@
     if(!(price>0)){ res.style.color="var(--loss)"; res.textContent="Enter a valid price (e.g. 2.5b or 2500000000)."; return; }
     var body={type:$("#r-type").value,item:item,price:price,quantity:qty};
     if(slotv) body.slot=parseInt(slotv,10);
+    var notesv=$("#r-notes").value.trim(); if(notesv) body.notes=notesv;
     res.style.color="var(--muted)"; res.textContent="Submitting…";
     req("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify(body)})
@@ -380,6 +384,8 @@
         // Reset quantity/slot so a stale value can't carry into the next report.
         $("#r-qty").value="1"; $("#r-slot").value="";
         var adjusted=j.price_adjusted&&j.price!=null?" (read your price as "+Number(j.price).toLocaleString()+" gp)":"";
+        if(j.personal) adjusted+=" · personal"; else if(j.drop) adjusted+=" · "+j.drop+" drop"; else if(j.p2p) adjusted+=" · p2p (no tax)";
+        $("#r-notes").value="";
         if(j.action==="report"){
           if(j.quarantined){ res.style.color="var(--gold)"; res.textContent="⚠️ "+(j.warning||"Held for review."); }
           else { res.style.color="var(--profit)"; res.textContent="✅ Reported "+j.item+adjusted+" — filed as "+(j.tier||"")+" market evidence."; }

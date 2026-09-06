@@ -159,6 +159,9 @@
       <input id="r-item" class="grow" placeholder="item — e.g. tume light" autocomplete="off">
     </div>
     <div class="row" style="margin-top:8px">
+      <input id="r-notes" class="grow" placeholder="notes (optional) — personal · pvm drop · clue drop · p2p" autocomplete="off">
+    </div>
+    <div class="row" style="margin-top:8px">
       <input id="r-price" class="grow" placeholder="price — full gp or 2.5b" autocomplete="off">
       <input id="r-qty" placeholder="qty" value="1" style="width:60px">
       <input id="r-slot" placeholder="slot" style="width:60px">
@@ -1094,15 +1097,19 @@
     var body = { type:$("#r-type").value, item:$("#r-item").value.trim(),
       price:parseGp($("#r-price").value), quantity:parseInt($("#r-qty").value||"1",10) };
     var slot = $("#r-slot").value.trim(); if(slot) body.slot = parseInt(slot,10);
+    var notes = $("#r-notes").value.trim(); if(notes) body.notes = notes;
     if(!body.item){ setStatus($("#r-status"),"Enter an item.","err"); return; }
     setStatus($("#r-status"),"Submitting…");
     var entered = body.price;
     api("/api/report",{method:"POST",body:body}).then(function(j){
+      var tag = j.personal ? " Filed as personal — outside community stats & slots."
+        : j.drop ? (" Filed as "+j.drop+" drop income.")
+        : j.p2p ? " Filed as P2P — no GE tax." : "";
       var msg = j.quarantined ? ("⚠️ "+(j.warning||"held for review"))
-        : j.price_adjusted ? ("✅ Reported at "+gpShort(j.price)+" — read "+gp(entered)+" as "+gpShort(j.price)+".")
-        : "✅ Reported.";
+        : j.price_adjusted ? ("✅ Reported at "+gpShort(j.price)+" — read "+gp(entered)+" as "+gpShort(j.price)+"."+tag)
+        : ("✅ Reported."+tag);
       setStatus($("#r-status"), msg, j.quarantined?"":"ok");
-      $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1";
+      $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1"; $("#r-notes").value="";
       api("/api/slots").then(renderSlots);
     }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
   };
@@ -1129,7 +1136,7 @@
   }
   enterSubmits(["#w-item"], "#w-add");
   enterSubmits(["#a-name", "#a-cash"], "#a-add");
-  enterSubmits(["#r-item", "#r-price", "#r-qty", "#r-slot"], "#r-submit");
+  enterSubmits(["#r-item", "#r-notes", "#r-price", "#r-qty", "#r-slot"], "#r-submit");
 
   $("#w-add").onclick = function(){
     var item = $("#w-item").value.trim();
