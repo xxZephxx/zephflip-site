@@ -1087,7 +1087,9 @@
     picker.innerHTML = grades.map(function(g){
       return '<button class="btn-ghost g-grade" data-grade="'+g+'" style="padding:6px 14px;margin-right:6px;font-weight:700">'+g+'</button>';
     }).join("") +
-      '<select id="g-group" style="margin-left:8px"><option value="">All markets</option><option>Bulk</option><option>Elite</option><option>Supreme</option></select>';
+      '<select id="g-group" style="margin-left:8px"><option value="">All markets</option>'+
+      GROUPS.map(function(x){ return '<option value="'+x.g+'">'+x.emoji+' '+x.market+'</option>'; }).join("")+
+      '</select>';
     picker.querySelectorAll(".g-grade").forEach(function(b){
       b.onclick = function(){
         picker.querySelectorAll(".g-grade").forEach(function(x){ x.style.borderColor=""; x.style.color=""; });
