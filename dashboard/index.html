@@ -1012,7 +1012,7 @@
     var mine = window._scouts || [];
     var allowed = GROUPS.filter(function(x){ return TIERRANK[tier] >= TIERRANK[x.tier]; });
     if(!allowed.length){ $("#scout-help").textContent = "The scout is a paid feature — upgrade to unlock it."; $("#scout").innerHTML=""; return; }
-    $("#scout-help").textContent = "Set a budget and get pinged in Discord when a new flip fits it. One scout per market.";
+    $("#scout-help").textContent = "Set a budget and get pinged in Discord when a new flip fits it. Margins and min-profit are per single item, not the buy limit. One scout per market.";
     $("#scout").innerHTML = allowed.map(function(x){
       var cur = mine.filter(function(m){ return m.group===x.g; })[0];
       return '<div style="border-top:1px solid var(--line);padding:10px 0">'+
