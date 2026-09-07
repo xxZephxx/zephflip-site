@@ -361,14 +361,19 @@
     var mult={k:1e3,m:1e6,b:1e9,t:1e12}[m[2]]||1;
     return Math.round(parseFloat(m[1])*mult);
   }
-  function prefillReport(d){ $("#r-item").value=d.item||""; updateReportPrice(); }
+  function prefillReport(d){ $("#r-item").value=d.item||""; window._priceTouched=false; updateReportPrice(); }
   function updateReportPrice(){
     if(!lastQuote) return;
+    // Never clobber a hand-typed price: switching Bought->Sold used to swap
+    // the member's real fill price for the live market price mid-form.
+    if(window._priceTouched && $("#r-price").value.trim()!=="") return;
     var buying=($("#r-type").value==="NIB"||$("#r-type").value==="PB");
     var px=buying?lastQuote.instant_sell:lastQuote.instant_buy;
     if(px!=null) $("#r-price").value=px;
   }
+  $("#r-price").addEventListener("input", function(){ window._priceTouched=true; });
   function submitReport(){
+    if(window._reportBusy) return;  // a double-click filed the trade twice
     var res=$("#r-result");
     var item=$("#r-item").value.trim(), price=parseGp($("#r-price").value);
     var qty=parseInt($("#r-qty").value||"1",10)||1, slotv=$("#r-slot").value.trim();
@@ -378,11 +383,14 @@
     if(slotv) body.slot=parseInt(slotv,10);
     var notesv=$("#r-notes").value.trim(); if(notesv) body.notes=notesv;
     res.style.color="var(--muted)"; res.textContent="Submitting…";
+    window._reportBusy=true;
     req("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify(body)})
       .then(function(j){
+        window._reportBusy=false;
         // Reset quantity/slot so a stale value can't carry into the next report.
         $("#r-qty").value="1"; $("#r-slot").value="";
+        window._priceTouched=false;
         var adjusted=j.price_adjusted&&j.price!=null?" (read your price as "+Number(j.price).toLocaleString()+" gp)":"";
         if(j.personal) adjusted+=" · personal"; else if(j.drop) adjusted+=" · "+j.drop+" drop"; else if(j.p2p) adjusted+=" · p2p (no tax)";
         $("#r-notes").value="";
@@ -393,7 +401,7 @@
         else { res.style.color="var(--profit)"; res.textContent="✅ Done."+adjusted; }
         poll();
       })
-      .catch(function(e){ res.style.color="var(--loss)"; res.textContent="⚠️ "+(e.message||"Failed"); });
+      .catch(function(e){ window._reportBusy=false; res.style.color="var(--loss)"; res.textContent="⚠️ "+(e.message||"Failed"); });
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g,function(c){

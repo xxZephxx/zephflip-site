@@ -295,9 +295,20 @@
     opts = opts || {};
     opts.headers = Object.assign({ "Authorization":"Bearer "+token() }, opts.headers||{});
     if(opts.body){ opts.headers["Content-Type"]="application/json"; opts.body=JSON.stringify(opts.body); }
+    // Text-first parse (same hardening the Alt1 app got): a Railway edge HTML
+    // 502 during a redeploy or a dropped connection must show a friendly
+    // message, never "Unexpected token '<'" or "Failed to fetch".
     return fetch(API+path, opts).then(function(r){
       if(r.status===401){ localStorage.removeItem(LS); showLogin("Session expired — log in again."); throw new Error("401"); }
-      return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||("HTTP "+r.status)); return j; });
+      return r.text().then(function(t){
+        var j = null;
+        try { j = JSON.parse(t); } catch(e){}
+        if(!r.ok) throw new Error((j && j.error) || "Can't reach the ZephFlip API right now ("+r.status+") — it may be redeploying; try again in a minute.");
+        if(j === null) throw new Error("The API sent an unexpected response — try again in a minute.");
+        return j;
+      });
+    }, function(){
+      throw new Error("Can't reach the ZephFlip API — check your connection or try again in a minute.");
     });
   }
 
@@ -342,12 +353,21 @@
     var active = document.activeElement;
     if(active && active.closest && active.closest("#watchlist")) return;
     api("/api/watchlist").then(function(w){
+      // Re-check at RENDER time too: the fetch resolves hundreds of ms after
+      // the tick fired, and a member who focused a row input in that window
+      // lost their typing to the innerHTML swap.
+      var act = document.activeElement;
+      if(act && act.closest && act.closest("#watchlist")) return;
       window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]);
     }).catch(function(){});
-    api("/api/slots").then(renderSlots).catch(function(){});
+    loadSlots();
     api("/api/rank").then(renderRank).catch(function(){});
     api("/api/alerts").then(renderAlerts).catch(function(){});
-    if(TREND.items.length) loadTrends();
+    // Skip the trend redraw while the member is hovering the chart — the
+    // rebuild hid an open tooltip/crosshair until the next mouse move.
+    var chartEl = document.getElementById("t-chart");
+    var hovering = chartEl && chartEl.matches && chartEl.matches(":hover");
+    if(TREND.items.length && !hovering) loadTrends();
   }, 75000);
 
   function loadAll(){
@@ -369,10 +389,11 @@
       api("/api/profit-series?days=30").then(function(p){ renderProfitChart(p.series||[]); }).catch(function(){});
       api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
       api("/api/alerts").then(renderAlerts).catch(function(){});
-      api("/api/slots").then(renderSlots).catch(function(){});
+      loadSlots();
       api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }).catch(function(){});
       api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
       api("/api/notes").then(function(n){ $("#notepad").value = n.notes||""; }).catch(function(){});
+      loadLevelChips();
       api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
       api("/api/portfolio").then(renderPortfolio).catch(function(){});
     }).catch(function(){
@@ -404,7 +425,9 @@
       b.onclick = function(){
         var id = b.getAttribute("data-save-cash");
         var v = $('[data-cash-for="'+id+'"]').value.trim(); if(!v) return;
-        api("/api/accounts",{method:"PATCH",body:{id:Number(id),cash:parseGp(v)}})
+        var cashV = parseGp(v);
+        if(isNaN(cashV)){ setStatus($("#a-status"),"Couldn't read \""+v+"\" — use e.g. 500m or 2.1b.","err"); return; }
+        api("/api/accounts",{method:"PATCH",body:{id:Number(id),cash:cashV}})
           .then(function(){ setStatus($("#a-status"),"Cash updated.","ok"); reloadAccounts(); })
           .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
       };
@@ -413,7 +436,7 @@
       b.onclick = function(){
         if(!confirm("Clear all GE slots on this account?")) return;
         api("/api/accounts/reset",{method:"POST",body:{id:Number(b.getAttribute("data-reset"))}})
-          .then(function(){ setStatus($("#a-status"),"Slots cleared.","ok"); api("/api/slots").then(renderSlots); })
+          .then(function(){ setStatus($("#a-status"),"Slots cleared.","ok"); loadSlots(); })
           .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
       };
     });
@@ -425,7 +448,9 @@
   $("#a-add").onclick = function(){
     var name = $("#a-name").value.trim(); if(!name) return;
     var cash = $("#a-cash").value.trim();
-    api("/api/accounts",{method:"POST",body:{name:name, cash:cash?parseGp(cash):0}})
+    var cashV = cash ? parseGp(cash) : 0;
+    if(isNaN(cashV)){ setStatus($("#a-status"),"Couldn't read \""+cash+"\" — use e.g. 500m or 2.1b.","err"); return; }
+    api("/api/accounts",{method:"POST",body:{name:name, cash:cashV}})
       .then(function(){ $("#a-name").value=""; $("#a-cash").value=""; setStatus($("#a-status"),"Account added.","ok"); reloadAccounts(); })
       .catch(function(e){ setStatus($("#a-status"), e.message, "err"); });
   };
@@ -488,15 +513,44 @@
   // ---- Price trends: up to 4 items, absolute gp for one / % change for several ----
   var TREND = { items: [], hours: 1080,
     colors: ["var(--amethyst)","var(--gold)","var(--profit)","var(--loss)"] };
+  // Restore the last charted setup — a reload used to lose the whole chart.
+  try {
+    var savedTrend = JSON.parse(localStorage.getItem("zf_trend")||"null");
+    if(savedTrend){
+      TREND.items = (savedTrend.items||[]).slice(0,4);
+      TREND.hours = savedTrend.hours||1080;
+    }
+  } catch(e){}
+  function saveTrendState(){
+    try {
+      localStorage.setItem("zf_trend", JSON.stringify({
+        items: TREND.items, hours: TREND.hours,
+        th: ($("#t-threshold")||{}).value || ""
+      }));
+    } catch(e){}
+  }
 
   function trendChips(){
     var el = $("#t-chips"); if(!el) return;
-    var rows = (window._watchRows||[]).filter(function(w){ return !w.auto_slotted; }).slice(0,24);
+    var all = (window._watchRows||[]).filter(function(w){ return !w.auto_slotted; });
+    var rows = all.slice(0,24);
     // Chips are the ONLY selector: if a charted item left the watchlist, drop
-    // it from the chart too, or it could never be removed.
-    var names = rows.map(function(w){ return w.item_name; });
+    // it from the chart too, or it could never be removed. Compare against the
+    // FULL list — Hades/Zeus can watch more than the 24 chips shown.
+    var names = all.map(function(w){ return w.item_name; });
     var kept = TREND.items.filter(function(n){ return names.indexOf(n)>=0; });
-    if(kept.length !== TREND.items.length){ TREND.items = kept; loadTrends(); }
+    if(kept.length !== TREND.items.length){ TREND.items = kept; saveTrendState(); loadTrends(); }
+    if(!TREND._restored){
+      TREND._restored = true;
+      try {
+        var st = JSON.parse(localStorage.getItem("zf_trend")||"null");
+        if(st && st.th && $("#t-threshold")) $("#t-threshold").value = st.th;
+      } catch(e){}
+      Array.prototype.forEach.call(document.querySelectorAll(".rng"), function(x){
+        x.classList.toggle("on", (parseInt(x.getAttribute("data-h"),10)||1080) === TREND.hours);
+      });
+      if(TREND.items.length) loadTrends();
+    }
     el.innerHTML = rows.map(function(w){
       var on = TREND.items.indexOf(w.item_name)>=0;
       return '<button class="wchip'+(on?' on':'')+'" data-item="'+esc(w.item_name)+'">'
@@ -512,15 +566,17 @@
     if(i>=0) TREND.items.splice(i,1);
     else if(TREND.items.length>=4){ setStatus($("#t-status"),"Four items max — remove one first.","err"); return; }
     else TREND.items.push(name);
+    saveTrendState();
     trendChips(); loadTrends();
   }
 
-  $("#t-threshold").addEventListener("change", loadTrends);
+  $("#t-threshold").addEventListener("change", function(){ saveTrendState(); loadTrends(); });
   Array.prototype.forEach.call(document.querySelectorAll(".rng"), function(b){
     b.onclick = function(){
       Array.prototype.forEach.call(document.querySelectorAll(".rng"), function(x){ x.classList.remove("on"); });
       b.classList.add("on");
       TREND.hours = parseInt(b.getAttribute("data-h"),10)||1080;
+      saveTrendState();
       loadTrends();
     };
   });
@@ -528,8 +584,14 @@
   function loadTrends(){
     if(!TREND.items.length){
       $("#t-chart").innerHTML=""; $("#t-legend").innerHTML="";
-      setStatus($("#t-status"),"",""); return;
+      setStatus($("#t-status"),"","");
+      loadLevelChips();  // armed levels stay visible/removable chart or not
+      return;
     }
+    // Only the NEWEST request may draw: clicking 45d then 7d quickly let the
+    // slower 45d response paint last under the "7d" chip (and compute the
+    // coverage note against the wrong window).
+    var seq = TREND.seq = (TREND.seq||0) + 1;
     setStatus($("#t-status"),"Loading history…","");
     var levelsReq = api("/api/levels").then(function(r){ TREND.levels = r.levels||[]; })
       .catch(function(){ TREND.levels = TREND.levels||[]; });
@@ -540,7 +602,7 @@
         .catch(function(){ return {name:name, points:[], failed:true}; });
     })).then(function(series){
       return levelsReq.then(function(){ return series; });
-    }).then(drawTrends);
+    }).then(function(series){ if(seq === TREND.seq) drawTrends(series); });
   }
 
   function tParse(at){
@@ -676,13 +738,23 @@
         +esc(l.name)+' <b class="num">'+gpShort(Math.round(l.current))+'</b> '
         +'<b class="'+(l.delta>=0?"profit":"loss")+'">'+d+'</b></span>';
     }).join("");
-    renderLevelChips(myLevels);
+    renderLevelChips(TREND.levels||[]);
   }
 
-  function renderLevelChips(myLevels){
+  function loadLevelChips(){
+    api("/api/levels").then(function(r){
+      TREND.levels = r.levels||[];
+      renderLevelChips(TREND.levels);
+    }).catch(function(){});
+  }
+
+  function renderLevelChips(levels){
     var el = $("#t-lvls"); if(!el) return;
-    el.innerHTML = (myLevels||[]).map(function(l){
-      return '<span class="wchip" style="cursor:default">🔔 '
+    // EVERY armed level renders here, item-labeled — not only the charted
+    // item's. Otherwise a level whose item left the watchlist kept DMing via
+    // Hermes with no way to see or remove it on the site.
+    el.innerHTML = (levels||[]).map(function(l){
+      return '<span class="wchip" style="cursor:default">🔔 '+esc(l.item)+' '
         +(l.direction==="below"?"falls to ":"rises to ")+gpShort(l.level)
         +' <span data-lvl-x="'+l.item_id+':'+l.level+'" style="cursor:pointer;color:var(--loss);margin-left:4px">✕</span></span>';
     }).join("");
@@ -690,7 +762,7 @@
       x.onclick = function(){
         var bits = x.getAttribute("data-lvl-x").split(":");
         api("/api/levels",{method:"DELETE",body:{item_id:Number(bits[0]), level:Number(bits[1])}})
-          .then(function(){ setStatus($("#t-status"),"Level removed.","ok"); loadTrends(); })
+          .then(function(){ setStatus($("#t-status"),"Level removed.","ok"); if(TREND.items.length) loadTrends(); else loadLevelChips(); })
           .catch(function(e){ setStatus($("#t-status"),e.message,"err"); });
       };
     });
@@ -843,6 +915,17 @@
     el.innerHTML = live + hist;
   }
 
+  // Monotonic sequence: only the NEWEST slots snapshot may render. Without
+  // this, the 75s tick's pre-action snapshot could resolve AFTER a Cancel/Fix
+  // refetch and resurrect a deleted slot for a whole cycle.
+  var _slotsSeq = 0;
+  function loadSlots(){
+    var seq = ++_slotsSeq;
+    return api("/api/slots").then(function(s){
+      if(seq === _slotsSeq) renderSlots(s);
+    }).catch(function(){});
+  }
+
   function renderSlots(s){
     var el = $("#slots");
     var filled = (s.slots||[]).filter(function(x){ return x.item; });
@@ -901,7 +984,7 @@
       b.onclick = function(){
         if(!confirm("Clear this slot? This only clears the slot display: reported buys stay in your profit ledger and cash is not refunded. If the BUY itself was wrong, void the report in Discord instead.")) return;
         api("/api/slots",{method:"DELETE",body:{flip_id:Number(b.getAttribute("data-cancel"))}})
-          .then(function(){ api("/api/slots").then(renderSlots); reloadAccounts(); })
+          .then(function(){ loadSlots(); reloadAccounts(); })
           .catch(function(e){ alert(e.message); });
       };
     });
@@ -912,7 +995,7 @@
         // finished buy, snaps the ×quantity to reality, clears phantom progress.
         api("/api/slots/refresh",{method:"POST",body:{flip_id:Number(b.getAttribute("data-refresh"))}})
           .then(function(res){
-            api("/api/slots").then(renderSlots);
+            loadSlots();
             var msg;
             if(res.closed){ msg = "✅ Everything on this lot had already sold — closed it and freed the slot."; }
             else if(res.collected){ msg = "✅ This buy was fully bought — collected it and freed the slot. The items are held for your sale."; }
@@ -990,7 +1073,9 @@
       b.onclick = function(){
         var tr = b.closest("tr");
         var p = tr.querySelector(".w-p").value.trim(), r = tr.querySelector(".w-r").value.trim();
-        api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:p?parseGp(p):null, min_roi:r?parseFloat(r):null}})
+        var pGp = p ? parseGp(p) : null;
+        if(p && isNaN(pGp)){ setStatus($("#w-status"),"Couldn't read \""+p+"\" as gp — use e.g. 5m.","err"); return; }
+        api("/api/watchlist",{method:"POST",body:{item:b.getAttribute("data-item"), min_profit:pGp, min_roi:r?parseFloat(r):null}})
           .then(function(){ setStatus($("#w-status"),"Alert updated.","ok"); api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
           .catch(function(e){ setStatus($("#w-status"), e.message, "err"); });
       };
@@ -1138,25 +1223,34 @@
   }
 
   // A bare number is literal gp (2300 -> 2,300). Suffixes scale: 2.5k, 500m,
-  // 2.5b, 1.2t. A trailing "gp" is stripped, so "2,300 gp" -> 2300.
+  // 2.5b, 1.2t. Inner spaces and a trailing "gp" are fine ("2.5 b", "2,300 gp").
+  // Unparseable input returns NaN — the old string passthrough serialized to
+  // null at the server, silently clearing values while the UI said "Saved ✓".
   function parseGp(v){
-    v = String(v||"").trim().toLowerCase().replace(/,/g,"").replace(/\s*gp$/,"");
+    v = String(v||"").toLowerCase().replace(/[\s,]/g,"").replace(/gp$/,"");
     var m = v.match(/^(\d+(?:\.\d+)?)([kmbt])?$/);
-    if(!m) return v;
+    if(!m) return NaN;
     var n = parseFloat(m[1]);
     var mult = { k:1e3, m:1e6, b:1e9, t:1e12 }[m[2]] || 1;
     return Math.round(n*mult);
   }
 
   $("#r-submit").onclick = function(){
+    // In-flight guard: a double-click (or a held Enter, which key-repeats)
+    // filed the trade TWICE — two real ledger rows and a double cash debit.
+    if(window._reportBusy) return;
     var body = { type:$("#r-type").value, item:$("#r-item").value.trim(),
       price:parseGp($("#r-price").value), quantity:parseInt($("#r-qty").value||"1",10) };
     var slot = $("#r-slot").value.trim(); if(slot) body.slot = parseInt(slot,10);
     var notes = $("#r-notes").value.trim(); if(notes) body.notes = notes;
     if(!body.item){ setStatus($("#r-status"),"Enter an item.","err"); return; }
+    if(isNaN(body.price)){ setStatus($("#r-status"),"Couldn't read the price — use e.g. 2.1b or 668509500.","err"); return; }
+    window._reportBusy = true; $("#r-submit").disabled = true;
+    var unbusy = function(){ window._reportBusy = false; $("#r-submit").disabled = false; };
     setStatus($("#r-status"),"Submitting…");
     var entered = body.price;
     api("/api/report",{method:"POST",body:body}).then(function(j){
+      unbusy();
       var tag = j.personal ? " Filed as personal — outside community stats & slots."
         : j.drop ? (" Filed as "+j.drop+" drop income.")
         : j.p2p ? " Filed as P2P — no GE tax." : "";
@@ -1165,8 +1259,8 @@
         : ("✅ Reported."+tag);
       setStatus($("#r-status"), msg, j.quarantined?"":"ok");
       $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1"; $("#r-notes").value="";
-      api("/api/slots").then(renderSlots);
-    }).catch(function(e){ setStatus($("#r-status"), e.message, "err"); });
+      loadSlots();
+    }).catch(function(e){ unbusy(); setStatus($("#r-status"), e.message, "err"); });
   };
 
   var _notesTimer = null;
