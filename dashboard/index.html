@@ -318,7 +318,13 @@
     else if(window._loginError) setStatus($("#loginStatus"), window._loginError, "err");
   }
   $("#loginBtn").onclick = function(){ location.href = API + "/auth/login"; };
-  $("#logout").onclick = function(){ localStorage.removeItem(LS); showLogin(); };
+  $("#logout").onclick = function(){
+    // Revoke server-side FIRST: clearing localStorage alone left the bearer
+    // token valid forever (shared machines, synced profiles).
+    api("/auth/logout",{method:"POST"}).catch(function(){}).then(function(){
+      localStorage.removeItem(LS); showLogin();
+    });
+  };
 
   // Two tabs: the active trading desk, and the stats/performance view.
   (function(){
@@ -396,7 +402,10 @@
       loadLevelChips();
       api("/api/accounts").then(function(a){ renderAccounts(a.accounts||[]); }).catch(function(){});
       api("/api/portfolio").then(renderPortfolio).catch(function(){});
-    }).catch(function(){
+    }).catch(function(e){
+      if(/paid-tier perk/.test(e.message||"")){
+        localStorage.removeItem(LS); showLogin(e.message); return;
+      }
       // API unreachable: say so instead of leaving every card on "Loading…".
       var el = document.getElementById("name");
       if (el) el.textContent = "Can't reach the ZephFlip API — it may be redeploying. Retrying won't hurt: refresh in a minute.";
