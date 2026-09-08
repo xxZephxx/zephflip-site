@@ -1,5 +1,9 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/item/overload-4", "destination": "/item/aggression-potion-4", "permanent": true },
+    { "source": "/item/grimy-ranarr-weed", "destination": "/item/grimy-ranarr", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/alt1/(.*)",
