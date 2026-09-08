@@ -221,6 +221,14 @@
   /* ---- sections ---- */
   section.band { padding: 88px 0; }
   .sec-head { max-width: 60ch; margin-bottom: 46px; }
+  /* Phones: 88px bands + 70px hero stacked up into whole blank screens
+     between sections while scrolling — tighten the rhythm. (Kept AFTER the
+     base rules: same specificity, so source order decides.) */
+  @media (max-width: 700px) {
+    section.band { padding: 48px 0; }
+    .hero { padding: 40px 0 28px; }
+    .sec-head { margin-bottom: 28px; }
+  }
   .sec-head h2 { font-size: clamp(30px, 4vw, 44px); margin-top: 14px; line-height: 1.1; }
   .sec-head p { color: var(--muted); margin: 14px 0 0; font-size: 18px; }
 

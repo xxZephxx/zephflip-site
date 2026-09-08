@@ -26,6 +26,13 @@
     color:var(--ink);margin:0 0 10px;}
   h1{font-size:20px;margin:0;display:flex;align-items:center;gap:10px;}
   h1 img{width:26px;height:26px;}
+  /* Mobile stacked cards: on a phone the slots/watchlist tables lost their
+     action buttons off the right edge — rows become cards under 700px. */
+  .mrow{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px;background:var(--panel2)}
+  .mrow .mtop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .mrow .mmid{margin:7px 0 0;font-size:14px}
+  .mrow .mbot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .mrow .mlab{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 3px}
   .tier{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;
     background:var(--panel2);color:var(--gold);text-transform:capitalize;}
   .muted{color:var(--muted);} .faint{color:var(--faint);font-size:13px;}
@@ -261,6 +268,22 @@
 (function(){
   var API = "https://zephflip-production.up.railway.app";
   var LS = "zf_dash_token";
+  function isMobile(){ return window.matchMedia("(max-width:700px)").matches; }
+  // Re-render the two adaptive cards when the layout crosses the breakpoint
+  // (rotation, window resize) using their cached payloads.
+  (function(){
+    var was = isMobile(), t = null;
+    window.addEventListener("resize", function(){
+      clearTimeout(t);
+      t = setTimeout(function(){
+        var now = isMobile();
+        if(now === was) return;
+        was = now;
+        if(window._lastSlotsPayload) renderSlots(window._lastSlotsPayload);
+        if(window._watchRows) renderWatchlist(window._watchRows);
+      }, 150);
+    });
+  })();
   var $ = function(s){ return document.querySelector(s); };
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -936,7 +959,9 @@
   }
 
   function renderSlots(s){
+    window._lastSlotsPayload = s;  // breakpoint re-renders reuse it
     var el = $("#slots");
+    var mobile = isMobile();
     var filled = (s.slots||[]).filter(function(x){ return x.item; });
     if(!filled.length){ el.innerHTML = '<div class="faint">No occupied slots. Report a buy/sell offer below with a slot number.</div>'; return; }
     var rows = filled.map(function(x){
@@ -968,14 +993,24 @@
       var age = (x.offer_at && (x.stage==="buying"||x.stage==="selling"))
         ? '<span class="num age" data-age="'+esc(x.offer_at)+'" title="How long this offer has sat at this price"></span>'
         : '<span class="faint">—</span>';
+      var fixBtn = '<button class="btn-ghost" data-refresh="'+x.flip_id+'" data-qty="'+(x.quantity||1)+'" title="One-click fix: closes a fully-sold listing, collects a finished buy, corrects the quantity, clears phantom progress" style="padding:5px 9px;font-size:12px;margin-right:6px">↻ Fix</button>';
+      var cancelBtn = '<button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button>';
+      if(mobile){
+        // Stacked card: everything visible, actions reachable — the table cut
+        // off Offer/Age/Fix/Cancel behind a horizontal scroll on phones.
+        return '<div class="mrow">'+
+          '<div class="mtop"><span><span class="faint num" title="'+esc(x.account)+'">#'+x.slot+'</span> <b title="'+esc(x.item)+'">'+esc(x.alias||x.item)+'</b></span><span>'+stage+'</span></div>'+
+          ((badge)?'<div class="mmid">'+badge.trim()+'</div>':'')+
+          '<div class="mmid">'+offer+(x.cost?' <span class="faint">· cost '+gp(x.cost)+'</span>':'')+'</div>'+
+          '<div class="mbot"><span class="faint" style="font-size:13px">'+age+'</span><span style="white-space:nowrap">'+fixBtn+cancelBtn+'</span></div>'+
+        '</div>';
+      }
       // Slot number carries the account name on hover (slots 1-8 = account 1, 9-16 = 2, …).
       return '<tr><td class="num" title="'+esc(x.account)+'">'+x.slot+'</td><td title="'+esc(x.item)+'"><b>'+esc(x.alias||x.item)+'</b></td><td>'+stage+badge+'</td><td class="num">'+offer+'</td><td class="num">'+cost+'</td><td class="num faint">'+age+'</td>'+
-        '<td style="text-align:right;white-space:nowrap">'+
-          '<button class="btn-ghost" data-refresh="'+x.flip_id+'" data-qty="'+(x.quantity||1)+'" title="One-click fix: closes a fully-sold listing, collects a finished buy, corrects the quantity, clears phantom progress" style="padding:5px 9px;font-size:12px;margin-right:6px">↻ Fix</button>'+
-          '<button class="btn-x" data-cancel="'+x.flip_id+'">Cancel</button>'+
-        '</td></tr>';
+        '<td style="text-align:right;white-space:nowrap">'+fixBtn+cancelBtn+'</td></tr>';
     }).join("");
-    el.innerHTML = '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Cost</th><th title="How long the offer has rested at this price">Age</th><th></th></tr>'+rows+'</table>';
+    el.innerHTML = mobile ? rows
+      : '<table><tr><th>Slot</th><th>Item</th><th>Stage</th><th>Offer</th><th>Cost</th><th title="How long the offer has rested at this price">Age</th><th></th></tr>'+rows+'</table>';
     // Live count-up of each offer's age; one shared ticker, reset on every render.
     function tickAges(){
       el.querySelectorAll(".age[data-age]").forEach(function(sp){
@@ -1044,7 +1079,8 @@
     var el = $("#watchlist");
     if(!manual.length){ el.innerHTML = '<div class="faint">No manual watches yet — add an item above to track its price, margin and movement, then set a crash/spike % on its row.</div>'; return; }
     var def = window._watchDefault||10;
-    el.innerHTML = '<table><tr>'+wlTh("name","Item")+wlTh("sell","Buy → Sell")+wlTh("margin","Margin")+wlTh("move","Move")+wlTh("vol","Vol")+'<th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+manual.map(function(w){
+    var mobile = isMobile();
+    var body = manual.map(function(w){
       var tag = w.enabled ? '' : ' <span class="pill" style="font-size:10px">paused</span>';
       var prices = (w.instant_sell!=null) ? gpShort(w.instant_sell)+' <span class="faint">→</span> '+gpShort(w.instant_buy) : '<span class="faint">—</span>';
       var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gpShort(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
@@ -1062,6 +1098,16 @@
         '<input class="w-crash" value="'+cv+'" placeholder="↓'+def+'" title="crash % — price drops this far" style="width:48px;padding:6px 6px">'+
         '<input class="w-spike" value="'+sv+'" placeholder="↑'+def+'" title="spike % — price jumps this far" style="width:48px;padding:6px 6px">'+
         '<button class="btn-ghost w-thresh" data-item="'+esc(w.item_name)+'" style="padding:5px 8px;font-size:12px">Set</button></div>';
+      var removeBtn = '<button class="btn-x w-remove" title="Remove from watchlist" data-item="'+esc(w.item_name)+'" style="padding:5px 9px">✕</button>';
+      if(mobile){
+        return '<div class="mrow">'+
+          '<div class="mtop"><span><b title="'+esc(w.item_name)+'">'+esc(w.alias||w.item_name)+'</b>'+tag+'</span>'+removeBtn+'</div>'+
+          '<div class="mmid num">'+prices+' <span class="faint">·</span> '+margin+'</div>'+
+          '<div class="mmid num" style="font-size:13px">'+move+' <span class="faint">move · '+vol+'</span></div>'+
+          '<div class="mlab">Alert when ≥ profit / ROI</div>'+alertCell+
+          '<div class="mlab">Crash / Spike %</div>'+threshCell+
+        '</div>';
+      }
       return '<tr><td title="'+esc(w.item_name)+'"><b>'+esc(w.alias||w.item_name)+'</b>'+tag+'</td>'+
         '<td class="num">'+prices+'</td>'+
         '<td class="num">'+margin+'</td>'+
@@ -1069,8 +1115,10 @@
         '<td class="num faint">'+vol+'</td>'+
         '<td>'+alertCell+'</td>'+
         '<td>'+threshCell+'</td>'+
-        '<td style="text-align:right"><button class="btn-x w-remove" title="Remove from watchlist" data-item="'+esc(w.item_name)+'" style="padding:5px 9px">✕</button></td></tr>';
-    }).join("")+'</table>';
+        '<td style="text-align:right">'+removeBtn+'</td></tr>';
+    }).join("");
+    el.innerHTML = mobile ? body
+      : '<table><tr>'+wlTh("name","Item")+wlTh("sell","Buy → Sell")+wlTh("margin","Margin")+wlTh("move","Move")+wlTh("vol","Vol")+'<th>Alert when ≥</th><th title="DM me when the price jumps or drops at least this far">Crash / Spike %</th><th></th></tr>'+body+'</table>';
     el.querySelectorAll(".w-remove").forEach(function(b){
       b.onclick = function(){
         api("/api/watchlist",{method:"DELETE",body:{item:b.getAttribute("data-item")}})
@@ -1080,7 +1128,7 @@
     });
     el.querySelectorAll(".w-save").forEach(function(b){
       b.onclick = function(){
-        var tr = b.closest("tr");
+        var tr = b.closest("tr,.mrow");
         var p = tr.querySelector(".w-p").value.trim(), r = tr.querySelector(".w-r").value.trim();
         var pGp = p ? parseGp(p) : null;
         if(p && isNaN(pGp)){ setStatus($("#w-status"),"Couldn't read \""+p+"\" as gp — use e.g. 5m.","err"); return; }
@@ -1102,7 +1150,7 @@
     });
     el.querySelectorAll(".w-thresh").forEach(function(b){
       b.onclick = function(){
-        var tr = b.closest("tr");
+        var tr = b.closest("tr,.mrow");
         var s = tr.querySelector(".w-spike").value.trim(), c = tr.querySelector(".w-crash").value.trim();
         api("/api/watchlist/thresholds",{method:"POST",body:{item:b.getAttribute("data-item"), spike:s?parseFloat(s):null, crash:c?parseFloat(c):null}})
           .then(function(){ setStatus($("#w-status"),"Crash/spike % updated — blank uses the "+(window._watchDefault||10)+"% default.","ok"); api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }); })
