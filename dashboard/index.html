@@ -628,13 +628,20 @@
     setStatus($("#t-status"),"Loading history…","");
     var levelsReq = api("/api/levels").then(function(r){ TREND.levels = r.levels||[]; })
       .catch(function(){ TREND.levels = TREND.levels||[]; });
+    // Single-item charts also overlay YOUR buys/sells as dots — entries and
+    // exits visible against the market line.
+    var tradesReq = (TREND.items.length===1)
+      ? api("/api/trades?item="+encodeURIComponent(TREND.items[0])+"&days="+Math.ceil(TREND.hours/24))
+          .then(function(r){ TREND.trades = r.trades||[]; })
+          .catch(function(){ TREND.trades = []; })
+      : Promise.resolve(TREND.trades = []);
     Promise.all(TREND.items.map(function(name){
       return fetch(API+"/api/public/history?item="+encodeURIComponent(name)+"&hours="+TREND.hours)
         .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
         .then(function(j){ return {name:j.item||name, points:j.points||[]}; })
         .catch(function(){ return {name:name, points:[], failed:true}; });
     })).then(function(series){
-      return levelsReq.then(function(){ return series; });
+      return levelsReq.then(function(){ return tradesReq; }).then(function(){ return series; });
     }).then(function(series){ if(seq === TREND.seq) drawTrends(series); });
   }
 
@@ -704,6 +711,11 @@
       ? (TREND.levels||[]).filter(function(l){ return l.item===usable[0].name; })
       : [];
     myLevels.forEach(function(l){ if(l.level<lo)lo=l.level; if(l.level>hi)hi=l.level; });
+    var myTrades = single ? (TREND.trades||[]).map(function(tr){
+      return {t:tParse(tr.at), price:tr.price, side:tr.side, type:tr.type,
+              quantity:tr.quantity, personal:tr.personal};
+    }).filter(function(tr){ return tr.t!=null && tr.price>0; }) : [];
+    myTrades.forEach(function(tr){ if(tr.price<lo)lo=tr.price; if(tr.price>hi)hi=tr.price; });
     var band=null;
     if(single && usable[0].pts.length>=5){
       var mids=usable[0].pts.map(function(p){return p.mid;}).sort(function(a,b){return a-b;});
@@ -749,6 +761,16 @@
       svg+='<path d="'+d+'" fill="none" stroke="'+l.color+'" stroke-width="2"/>'
          +'<circle cx="'+X(last.t).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3" fill="'+l.color+'"/>';
     });
+    myTrades.forEach(function(tr){
+      if(tr.t<t0 || tr.t>t1) return;
+      var color = tr.side==="buy" ? "var(--profit)" : "var(--loss)";
+      var when = new Date(tr.t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+      svg+='<circle cx="'+X(tr.t).toFixed(1)+'" cy="'+Y(tr.price).toFixed(1)+'" r="4" fill="'+color+'"'
+         +(tr.personal?' opacity="0.45"':'')
+         +' stroke="var(--ground)" stroke-width="1.2">'
+         +'<title>'+esc(tr.type)+' '+gp(tr.quantity)+' @ '+gp(tr.price)+' gp · '+esc(when)
+         +(tr.personal?' · personal':'')+'</title></circle>';
+    });
     svg+='</svg>';
     var box=$("#t-chart");
     box.innerHTML=svg;
@@ -770,7 +792,9 @@
       return '<span style="font-size:12px"><span class="t-dot" style="background:'+l.color+'"></span>'
         +esc(l.name)+' <b class="num">'+gpShort(Math.round(l.current))+'</b> '
         +'<b class="'+(l.delta>=0?"profit":"loss")+'">'+d+'</b></span>';
-    }).join("");
+    }).join("")+(myTrades.length
+      ? ' <span style="font-size:12px" class="faint"><span class="t-dot" style="background:var(--profit)"></span>your buys <span class="t-dot" style="background:var(--loss)"></span>sells</span>'
+      : "");
     renderLevelChips(TREND.levels||[]);
   }
 
