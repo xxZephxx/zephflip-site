@@ -171,7 +171,7 @@
     <div class="row" style="margin-top:8px">
       <input id="r-price" class="grow" placeholder="price — full gp or 2.5b" autocomplete="off">
       <input id="r-qty" placeholder="qty" value="1" style="width:60px">
-      <input id="r-slot" placeholder="slot" style="width:60px">
+      <input id="r-slot" placeholder="slot" title="GE slot: 1-8 on your first account, 1.2-8.2 on the second" style="width:64px">
       <button class="btn btn-gold" id="r-submit">Submit</button>
     </div>
     <div class="status" id="r-status"></div>
@@ -1334,7 +1334,7 @@
     if(window._reportBusy) return;
     var body = { type:$("#r-type").value, item:$("#r-item").value.trim(),
       price:parseGp($("#r-price").value), quantity:parseInt($("#r-qty").value||"1",10) };
-    var slot = $("#r-slot").value.trim(); if(slot) body.slot = parseInt(slot,10);
+    var slot = $("#r-slot").value.trim(); if(slot) body.slot = slot;
     var notes = $("#r-notes").value.trim(); if(notes) body.notes = notes;
     if(!body.item){ setStatus($("#r-status"),"Enter an item.","err"); return; }
     if(isNaN(body.price)){ setStatus($("#r-status"),"Couldn't read the price — use e.g. 2.1b or 668509500.","err"); return; }

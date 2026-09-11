@@ -136,7 +136,7 @@
       <div class="row">
         <input id="r-price" class="grow" placeholder="price — full gp or 2.5b" autocomplete="off" spellcheck="false">
         <input id="r-qty" placeholder="qty" value="1" style="width:52px">
-        <input id="r-slot" placeholder="slot" style="width:52px">
+        <input id="r-slot" placeholder="slot" title="1-8 on your first account, 1.2-8.2 on the second" style="width:58px">
       </div>
       <div class="row">
         <input id="r-notes" class="grow" placeholder="notes — personal · pvm drop · p2p" autocomplete="off" spellcheck="false">
@@ -380,7 +380,7 @@
     if(!item){ res.style.color="var(--loss)"; res.textContent="Enter an item."; return; }
     if(!(price>0)){ res.style.color="var(--loss)"; res.textContent="Enter a valid price (e.g. 2.5b or 2500000000)."; return; }
     var body={type:$("#r-type").value,item:item,price:price,quantity:qty};
-    if(slotv) body.slot=parseInt(slotv,10);
+    if(slotv) body.slot=slotv;
     var notesv=$("#r-notes").value.trim(); if(notesv) body.notes=notesv;
     res.style.color="var(--muted)"; res.textContent="Submitting…";
     window._reportBusy=true;
