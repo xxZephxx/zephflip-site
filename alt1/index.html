@@ -134,7 +134,7 @@
         <input id="r-item" class="grow" placeholder="item" autocomplete="off" spellcheck="false">
       </div>
       <div class="row">
-        <input id="r-price" class="grow" placeholder="price — full gp or 2.5b" autocomplete="off" spellcheck="false">
+        <input id="r-price" class="grow" placeholder="price — 192.5 = 192.5m · 2.1b · 7,000 exact" autocomplete="off" spellcheck="false">
         <input id="r-qty" placeholder="qty" value="1" style="width:52px">
         <input id="r-slot" placeholder="slot" title="1-8 on your first account, 1.2-8.2 on the second" style="width:58px">
       </div>
@@ -354,12 +354,33 @@
     return ""+n;
   }
   function full(n){ return n==null?"—":Number(n).toLocaleString(); }
-  function parseGp(s){
-    s=String(s).trim().toLowerCase().replace(/,/g,"").replace(/\s/g,"").replace(/gp$/,"");
-    var m=s.match(/^(\d+(?:\.\d+)?)([kmbt])?$/);
+  // The same rules as the Discord bot's parse_gp (and the dashboard's copy of
+  // this function): a bare number under 1,000,000 is millions (192.5 = 192.5m),
+  // 1,000,000 or more is exact gp, comma groups are exact gp (7,000), suffixes
+  // scale (500k, 2.03b, 450gp). Digits are shifted rather than float-multiplied
+  // so 2.03b is exactly 2,030,000,000; fractions of a gp are dropped.
+  function parseGp(v){
+    v = String(v==null?"":v).toLowerCase().replace(/\s/g,"");
+    var exact = v.match(/^(\d{1,3}(?:,\d{3})+)(gp)?$/);
+    if(exact) return parseInt(exact[1].replace(/,/g,""),10);
+    var m = v.replace(/_/g,"").match(/^(\d+)(?:\.(\d+))?(gp|[kmbt])?$/);
     if(!m) return NaN;
-    var mult={k:1e3,m:1e6,b:1e9,t:1e12}[m[2]]||1;
-    return Math.round(parseFloat(m[1])*mult);
+    var whole = m[1], frac = m[2]||"";
+    var shift = m[3] ? { gp:0, k:3, m:6, b:9, t:12 }[m[3]]
+                     : (Number(whole) >= 1e6 ? 0 : 6);
+    return parseInt(whole + (frac+"000000000000").slice(0, shift), 10);
+  }
+  // A gp amount written into an input in a form parseGp reads back exactly:
+  // compact when exact (192.5m, 7.5k), comma groups when not, "gp" below 1k.
+  function gpInput(n){
+    if(n==null||n==="") return "";
+    n = Math.round(Number(n));
+    if(!isFinite(n) || n<0) return "";
+    if(n===0) return "0gp";
+    if(n<1e3) return n+"gp";
+    var unit = n>=1e12 ? ["t",1e12] : n>=1e9 ? ["b",1e9] : n>=1e6 ? ["m",1e6] : ["k",1e3];
+    if(n % (unit[1]/1e3) === 0) return (n/unit[1]).toFixed(3).replace(/\.?0+$/,"")+unit[0];
+    return n.toLocaleString("en-US");
   }
   function prefillReport(d){ $("#r-item").value=d.item||""; window._priceTouched=false; updateReportPrice(); }
   function updateReportPrice(){
@@ -369,7 +390,7 @@
     if(window._priceTouched && $("#r-price").value.trim()!=="") return;
     var buying=($("#r-type").value==="NIB"||$("#r-type").value==="PB");
     var px=buying?lastQuote.instant_sell:lastQuote.instant_buy;
-    if(px!=null) $("#r-price").value=px;
+    if(px!=null) $("#r-price").value=gpInput(px);
   }
   $("#r-price").addEventListener("input", function(){ window._priceTouched=true; });
   function submitReport(){
