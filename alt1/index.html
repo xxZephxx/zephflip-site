@@ -345,13 +345,16 @@
     return '<div class="stat"><span>'+label+'</span><b'+(color?' style="color:'+color+'"':"")+">"+val+"</b></div>";
   }
 
+  // Exact, never rounded: compact when that is exact (192.5m, 7.45k),
+  // otherwise the full number (192,555,555).
   function gp(n){
     if(n==null) return "—";
+    n=Math.round(Number(n));
     if(n<0) return "-"+gp(-n);
-    if(n>=1e9) return (n/1e9).toFixed(2).replace(/\.?0+$/,"")+"b";
-    if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,"")+"m";
-    if(n>=1e3) return (n/1e3).toFixed(0)+"k";
-    return ""+n;
+    if(n<1e3) return ""+n;
+    var u = n>=1e12 ? [1e12,"t"] : n>=1e9 ? [1e9,"b"] : n>=1e6 ? [1e6,"m"] : [1e3,"k"];
+    if(n % (u[0]/1e3) === 0) return (n/u[0]).toFixed(3).replace(/\.?0+$/,"")+u[1];
+    return n.toLocaleString("en-US");
   }
   function full(n){ return n==null?"—":Number(n).toLocaleString(); }
   // The same rules as the Discord bot's parse_gp (and the dashboard's copy of

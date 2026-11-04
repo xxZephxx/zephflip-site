@@ -289,7 +289,15 @@
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
   var gp = function(n){ return Number(n||0).toLocaleString(); };
-  var gpShort = function(n){ n = Number(n||0); var s = n<0?"-":""; n = Math.abs(n);
+  // Prices, margins and profits are shown exactly: compact when that is exact
+  // (192.5m, 7.45k), otherwise the full number (192,555,555) — never rounded.
+  var gpShort = function(n){ n = Math.round(Number(n||0)); var s = n<0?"-":""; n = Math.abs(n);
+    if(n<1e3) return s+n;
+    var u = n>=1e12 ? [1e12,"t"] : n>=1e9 ? [1e9,"b"] : n>=1e6 ? [1e6,"m"] : [1e3,"k"];
+    if(n % (u[0]/1e3) === 0) return s+(n/u[0]).toFixed(3).replace(/\.?0+$/,"")+u[1];
+    return s+n.toLocaleString("en-US"); };
+  // Rounded, for chart axis/bar labels and trade volume — summaries, not prices.
+  var gpApprox = function(n){ n = Number(n||0); var s = n<0?"-":""; n = Math.abs(n);
     if(n>=1e9) return s+(n/1e9).toFixed(2).replace(/\.?0+$/,"")+"b";
     if(n>=1e6) return s+(n/1e6).toFixed(1).replace(/\.?0+$/,"")+"m";
     if(n>=1e3) return s+(n/1e3).toFixed(1).replace(/\.?0+$/,"")+"k";
@@ -725,7 +733,7 @@
     }
     function X(t){ return padL+(t-t0)/((t1-t0)||1)*(W-padL-padR); }
     function Y(v){ return padT+(1-(v-lo)/(hi-lo))*(H-padT-padB); }
-    function fmtY(v){ return single ? gpShort(Math.round(v)) : ((v>=0?"+":"")+v.toFixed(1)+"%"); }
+    function fmtY(v){ return single ? gpApprox(Math.round(v)) : ((v>=0?"+":"")+v.toFixed(1)+"%"); }
     var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block" preserveAspectRatio="none">';
     if(band){
       var by1=Y(band.hi), by2=Y(band.lo);
@@ -733,7 +741,7 @@
          +'<text x="'+(W-padR-4)+'" y="'+(by1+10).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--amethyst)" opacity="0.7" font-family="var(--mono)">usual range</text>';
       var ay=Y(band.avg);
       svg+='<line x1="'+padL+'" y1="'+ay.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+ay.toFixed(1)+'" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3 4"/>'
-         +'<text x="'+(padL+4)+'" y="'+(ay-3).toFixed(1)+'" font-size="9" fill="var(--faint)" font-family="var(--mono)">avg '+gpShort(Math.round(band.avg))+'</text>';
+         +'<text x="'+(padL+4)+'" y="'+(ay-3).toFixed(1)+'" font-size="9" fill="var(--faint)" font-family="var(--mono)">avg '+gpApprox(Math.round(band.avg))+'</text>';
     }
     [0,0.5,1].forEach(function(f){
       var v=lo+(hi-lo)*f, y=Y(v);
@@ -905,7 +913,7 @@
       var col=d.profit>=0?"var(--profit)":"var(--loss)";
       var day=(d.date||"").slice(5);
       var label=d.profit
-        ? '<span class="plbl" style="color:'+col+'">'+(d.profit>0?"+":"−")+gpShort(Math.abs(d.profit))+'</span>'
+        ? '<span class="plbl" style="color:'+col+'">'+(d.profit>0?"+":"−")+gpApprox(Math.abs(d.profit))+'</span>'
         : '<span class="plbl"></span>';
       return '<div class="pcol" title="'+esc(day)+': '+(d.profit>=0?"+":"")+gp(d.profit)+' gp">'
         +label
@@ -1110,7 +1118,7 @@
       var prices = (w.instant_sell!=null) ? gpShort(w.instant_sell)+' <span class="faint">→</span> '+gpShort(w.instant_buy) : '<span class="faint">—</span>';
       var margin = (w.margin!=null) ? '<b class="'+(w.margin>=0?"profit":"loss")+'">'+(w.margin>=0?"+":"")+gpShort(w.margin)+'</b>'+(w.roi!=null?' <span class="faint">· '+w.roi+'%</span>':'') : '<span class="faint">—</span>';
       var move = (w.movement_pct!=null) ? '<span class="'+(w.movement_pct>=0?"profit":"loss")+'">'+(w.movement_pct>0?"+":"")+w.movement_pct+'%</span>' : '<span class="faint">—</span>';
-      var vol = (w.volume!=null) ? gpShort(w.volume)+'/h' : '<span class="faint">—</span>';
+      var vol = (w.volume!=null) ? gpApprox(w.volume)+'/h' : '<span class="faint">—</span>';
       var pv = (w.min_net_profit && w.min_net_profit>0) ? gpInput(w.min_net_profit) : '';
       var rv = (w.min_roi && w.min_roi>0) ? w.min_roi : '';
       var alertCell = '<div class="row" style="gap:4px;flex-wrap:nowrap">'+
@@ -1280,7 +1288,7 @@
           '<div class="mtop"><b>'+esc(m.item)+'</b><span class="faint" style="font-size:12px">'+esc(m.grade)+' '+m.score+'</span></div>'+
           '<div class="mmid num" style="font-size:13px">'+gpShort(m.buy)+' <span class="faint">→</span> '+gpShort(m.sell)+
           ' <span class="faint">·</span> <b class="'+(m.margin>=0?"profit":"loss")+'">'+(m.margin>=0?"+":"")+gpShort(m.margin)+'</b>'+
-          ' <span class="faint">· '+m.roi+'% · '+gpShort(m.volume)+volLabel+'</span></div>'+
+          ' <span class="faint">· '+m.roi+'% · '+gpApprox(m.volume)+volLabel+'</span></div>'+
         '</div>';
       }).join("");
     }
@@ -1289,7 +1297,7 @@
         return '<tr><td><b>'+esc(m.item)+'</b></td>'+
           '<td class="num">'+gpShort(m.buy)+' <span class="faint">→</span> '+gpShort(m.sell)+'</td>'+
           '<td class="num"><b class="'+(m.margin>=0?"profit":"loss")+'">'+(m.margin>=0?"+":"")+gpShort(m.margin)+'</b> <span class="faint">· '+m.roi+'%</span></td>'+
-          '<td class="num faint">'+gpShort(m.volume)+volLabel+'</td>'+
+          '<td class="num faint">'+gpApprox(m.volume)+volLabel+'</td>'+
           '<td class="faint">'+esc(m.grade)+' '+m.score+'</td></tr>';
       }).join("")+'</table>';
   }
