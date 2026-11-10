@@ -18,6 +18,7 @@
 --   reporter.lua  sends reports to the ZephFlip API with a saved retry queue
 --   quotes.lua    price checks against the ZephFlip API
 --   panel.lua     the in-game window
+--   theme.lua     ZephFlip colours (same as zephflip.com)
 --   json.lua      tiny JSON helper (the plugin API has none)
 
 local Tracker = require("tracker")
@@ -50,11 +51,15 @@ local quotes    -- created below
 
 -- Small helpers -------------------------------------------------------------
 
--- 1234567 -> "1,234,567"
-local function formatGp(amount)
-    local digits = tostring(math.floor(amount))
-    local withCommas = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-    return (withCommas:gsub("^,", ""))
+-- Item names longer than this are cut short in the "Recent reports" list,
+-- so each report fits on one line of the panel.
+local MAX_ITEM_CHARS = 16
+
+local function shortItemName(name)
+    if #name <= MAX_ITEM_CHARS then
+        return name
+    end
+    return name:sub(1, MAX_ITEM_CHARS - 2) .. ".."
 end
 
 local function slotsKey(name) return "slots:" .. name end
@@ -112,13 +117,15 @@ local function queueReport(report, slot)
         price = report.price,
         quantity = report.quantity,
     }
+    -- Short one-line label for the panel, e.g. "Sold 1 Tumeken's light 2.15b"
+    -- or "Sell offer s2 1 Tumeken's light 2.1b".
     local verb = ({ NIB = "Bought", NIS = "Sold", PB = "Buy offer", PS = "Sell offer" })[report.type]
-    local label = verb .. " " .. formatGp(report.quantity) .. "x " .. report.item
-        .. " @ " .. formatGp(report.price)
     if report.kind == "placed" then
         fields.slot = Tracker.SlotLabel(slot, character.account)
-        label = label .. " (slot " .. fields.slot .. ")"
+        verb = verb .. " s" .. fields.slot
     end
+    local label = verb .. " " .. Quotes.CompactGp(report.quantity) .. " "
+        .. shortItemName(report.item) .. " " .. Quotes.CompactGp(report.price)
     reporter:Enqueue(fields, label)
 end
 
@@ -232,7 +239,7 @@ reporter = Reporter.new(
     Plugin.urls.zephflip,
     function() return settings.token end,
     function(ok, message)
-        panel:AddActivity((ok and "OK  " or "!!  ") .. message)
+        panel:AddActivity(ok, message)
         refreshStatus()
     end)
 

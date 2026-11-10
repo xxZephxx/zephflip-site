@@ -134,12 +134,14 @@ end }
 
 -- Minimal UI fake: every component accepts any property and method call.
 local function component()
-    return setmetatable({ headerText = {} }, { __index = function() return function() end end })
+    return setmetatable({ headerText = {}, sprite = {}, text = {}, containerSprite = {} },
+        { __index = function() return function() end end })
 end
 local componentType = { new = component }
+Vector4 = { new = function(r, g, b, a) return { r, g, b, a } end }
 ui = {
     Interfaces = { GetComponent = component },
-    GroupBox = componentType, Layer = componentType, Text = componentType,
+    GroupBox = componentType, Layer = componentType, Rectangle = componentType, Text = componentType,
     Button = componentType, InputField = componentType,
     AlignMode = {}, Hook = {}, GroupBoxHeaderAlignMode = {},
     TextContentVisibilityMode = {}, InputFieldFilterMode = {}, InputFieldActionResult = {},
@@ -226,15 +228,21 @@ check(db["slots:Zeph"].s6 ~= nil, "paused: slot still remembered")
 ---------------------------------------------------------------------------
 local Quotes = require("quotes")
 local lines = Quotes.Format(getResponse.data, "tume")
-eq(lines[1], "Tumeken's light  [A 81/100]", "quote title")
-eq(lines[2], "Buy 2,050,000,000  >  Sell 2,100,000,000", "quote prices (flip direction)")
-eq(lines[3], "Margin after tax 8,000,000  ROI 0.39%", "quote margin")
+eq(lines[1], "<col=ece7f6>Tumeken's light</col>  <col=e6c583>[A 81/100]</col>", "quote title")
+eq(lines[2], "Buy 2.05b  >  Sell 2.1b", "quote prices (flip direction)")
+eq(lines[3], "Margin after tax <col=63d79b>8m</col>  ROI 0.39%", "quote margin green")
 eq(lines[4], "Volume 3/hr  40/24h", "quote volume")
-eq(lines[5], "Recent move -1.2%", "quote move")
+eq(lines[5], "Recent move <col=f2726f>-1.2%</col>", "quote move red")
 lines = Quotes.Format('{"item":"Rare thing","complete":false}', "rare")
 eq(lines[2], "No complete live price right now.", "incomplete quote")
 eq(Quotes.FormatGp(-1234567), "-1,234,567", "negative gp")
 eq(Quotes.FormatGp(999), "999", "small gp")
+eq(Quotes.CompactGp(2150000000), "2.15b", "compact b")
+eq(Quotes.CompactGp(9412), "9.412k", "compact k exact")
+eq(Quotes.CompactGp(192555555), "192,555,555", "compact falls back when it would round")
+eq(Quotes.CompactGp(250), "250", "compact small")
+eq(Quotes.CompactGp(2000000), "2m", "compact whole")
+eq(Quotes.CompactGp(-300000), "-300k", "compact negative")
 
 -- Errors and the "one at a time, newest wins" queue.
 local shown

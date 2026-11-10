@@ -29,13 +29,22 @@ the same item intelligence as the Alt1 app, via `/api/quote`:
 
 ```
 Tumeken's light  [A 81/100]          <- ZephScore grade
-Buy 2,050,000,000  >  Sell 2,100,000,000
-Margin after tax 8,000,000  ROI 0.39%
+Buy 2.05b  >  Sell 2.1b
+Margin after tax 8m  ROI 0.39%
 Volume 3/hr  40/24h
 Recent move -1.2%
 ```
 
 Short names work the same way they do in Discord (e.g. `tume light`).
+Prices are shown in short form only when that is still exact (2.05b, 9.412k);
+otherwise the full number is shown. Margins and moves are green when up and
+red when down.
+
+### Look
+
+The window uses ZephFlip's own colours (the zephflip.com / Alt1 palette:
+dark purple background, gold buttons, amethyst accent) instead of the game's
+default window style. Each line in "Recent reports" is cut to fit one row.
 
 ## Files
 
@@ -47,6 +56,7 @@ ZephFlip/            <- the plugin folder (this is what gets zipped)
   reporter.lua       HTTP queue with retry, saved in PersistentDB
   quotes.lua         price checks (/api/quote) and their formatting
   panel.lua          the in-game window
+  theme.lua          ZephFlip colours (same palette as zephflip.com)
   json.lua           tiny JSON helper (the API has no JSON library)
 tests/run.lua        offline tests against a fake client
 package.sh           builds dist/ZephFlip-<version>.zip for mod.io

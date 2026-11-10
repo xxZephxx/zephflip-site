@@ -7,6 +7,7 @@
 -- (older pending requests are simply replaced).
 
 local json = require("json")
+local Theme = require("theme")
 
 local Quotes = {}
 Quotes.__index = Quotes
@@ -23,6 +24,27 @@ local function formatGp(amount)
 end
 Quotes.FormatGp = formatGp
 
+-- Short form for the "Recent reports" list, still exact: 2150000000 -> "2.15b",
+-- 9412 -> "9.412k". If the short form would have to round, the full number
+-- with commas is used instead (192555555 -> "192,555,555").
+function Quotes.CompactGp(amount)
+    if amount < 0 then
+        return "-" .. Quotes.CompactGp(-amount)
+    end
+    local units = { { 1e12, "t" }, { 1e9, "b" }, { 1e6, "m" }, { 1e3, "k" } }
+    for _, unit in ipairs(units) do
+        local size, suffix = unit[1], unit[2]
+        if amount >= size then
+            if amount % (size / 1000) ~= 0 then
+                return formatGp(amount)
+            end
+            local short = string.format("%.3f", amount / size):gsub("%.?0+$", "")
+            return short .. suffix
+        end
+    end
+    return formatGp(amount)
+end
+
 -- Make an item name safe to put in a URL query ("Tumeken's light" -> "Tumeken%27s%20light").
 local function urlEncode(text)
     return (text:gsub("[^%w%-%._~]", function(c)
@@ -31,9 +53,18 @@ local function urlEncode(text)
 end
 Quotes.UrlEncode = urlEncode
 
--- Turn a /api/quote response body into display lines.
+-- Colour a gp/percent value green when positive and red when negative.
+local function gainLoss(value, text)
+    if value == nil or value == 0 then
+        return text
+    end
+    return Theme.Tag(value > 0 and "profit" or "loss", text)
+end
+
+-- Turn a /api/quote response body into display lines (with colour tags:
+-- item name in white, grade in gold, margin and move in green/red).
 function Quotes.Format(body, askedFor)
-    local name = json.ReadString(body, "item") or askedFor
+    local name = Theme.Tag("ink", json.ReadString(body, "item") or askedFor)
     if json.ReadBool(body, "complete") == false then
         return { name, "No complete live price right now." }
     end
@@ -42,18 +73,21 @@ function Quotes.Format(body, askedFor)
     local score = json.ReadNumber(body, "zephscore")
     local grade = json.ReadString(body, "grade")
     if score ~= nil and grade ~= nil then
-        table.insert(lines, name .. "  [" .. grade .. " " .. formatGp(score) .. "/100]")
+        table.insert(lines, name .. "  " .. Theme.Tag("gold", "[" .. grade .. " " .. formatGp(score) .. "/100]"))
     else
         table.insert(lines, name)
     end
 
     -- Flip direction: buy at the instant-sell price, sell at the instant-buy price.
-    table.insert(lines, "Buy " .. formatGp(json.ReadNumber(body, "instant_sell"))
-        .. "  >  Sell " .. formatGp(json.ReadNumber(body, "instant_buy")))
+    -- Short exact form (2.05b) so each line fits the panel's width.
+    local buyAt = json.ReadNumber(body, "instant_sell")
+    local sellAt = json.ReadNumber(body, "instant_buy")
+    table.insert(lines, "Buy " .. (buyAt and Quotes.CompactGp(buyAt) or "-")
+        .. "  >  Sell " .. (sellAt and Quotes.CompactGp(sellAt) or "-"))
 
     local margin = json.ReadNumber(body, "margin")
     local roi = json.ReadNumber(body, "roi")
-    table.insert(lines, "Margin after tax " .. formatGp(margin)
+    table.insert(lines, "Margin after tax " .. gainLoss(margin, margin and Quotes.CompactGp(margin) or "-")
         .. (roi and ("  ROI " .. roi .. "%") or ""))
 
     local hourly = json.ReadNumber(body, "volume")
@@ -64,7 +98,7 @@ function Quotes.Format(body, askedFor)
 
     local move = json.ReadNumber(body, "movement_pct")
     if move ~= nil then
-        table.insert(lines, "Recent move " .. (move > 0 and "+" or "") .. move .. "%")
+        table.insert(lines, "Recent move " .. gainLoss(move, (move > 0 and "+" or "") .. move .. "%"))
     end
     return lines
 end

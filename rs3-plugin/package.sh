@@ -11,5 +11,5 @@ version=$(python3 -c 'import json;print(json.load(open("plugin.json"))["version"
 out="../dist/ZephFlip-$version.zip"
 mkdir -p ../dist
 rm -f "$out"
-zip -q "$out" plugin.json main.lua tracker.lua reporter.lua quotes.lua panel.lua json.lua
+zip -q "$out" plugin.json main.lua tracker.lua reporter.lua quotes.lua panel.lua theme.lua json.lua
 echo "Built rs3-plugin/dist/ZephFlip-$version.zip"
