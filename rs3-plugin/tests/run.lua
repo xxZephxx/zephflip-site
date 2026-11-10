@@ -34,6 +34,12 @@ eq(json.ReadString('{"error":"a \\"b\\" \\u2014 c"}', "error"), 'a "b" — c', "
 eq(json.ReadString('{"ok":true}', "error"), nil, "read missing")
 eq(json.ReadString(nil, "error"), nil, "read nil body")
 
+eq(json.ReadNumber('{"volume_24h": 900, "volume": 12, "roi": 4.25}', "volume"), 12, "number not confused with longer key")
+eq(json.ReadNumber('{"roi": 4.25}', "roi"), 4.25, "float number")
+eq(json.ReadNumber('{"margin": -300}', "margin"), -300, "negative number")
+eq(json.ReadNumber('{"margin": null}', "margin"), nil, "null number")
+eq(json.ReadBool('{"complete": false}', "complete"), false, "bool false")
+
 ---------------------------------------------------------------------------
 -- tracker.lua
 ---------------------------------------------------------------------------
@@ -104,10 +110,18 @@ PluginPermissions = { httpAccess = "httpAccess" }
 Plugin = { urls = { zephflip = "https://api.test" }, HasPermission = function() return hasHttp end }
 
 local sent = {}         -- every POST the plugin made
+local gets = {}         -- every GET the plugin made
+local getResponse = { code = 200, data = '{"item":"Tumeken\'s light","complete":true,"instant_buy":2100000000,"instant_sell":2050000000,"margin":8000000,"roi":0.39,"zephscore":81,"grade":"A","volume":3,"volume_24h":40,"movement_pct":-1.2}' }
 local nextResponse = { code = 200, data = '{"ok":true}' }
 HTTPRequest = { new = function(base, path)
     local req = { headers = {} }
     function req:AddHeader(k, v) self.headers[k] = v end
+    function req:Get(cb)
+        table.insert(gets, { url = base .. path, headers = self.headers })
+        self.responseCode = getResponse.code
+        self.data = getResponse.data
+        cb(self)
+    end
     function req:Post(body, cb)
         table.insert(sent, { url = base .. path, body = body, headers = self.headers })
         self.responseCode = nextResponse.code
@@ -128,7 +142,7 @@ ui = {
     GroupBox = componentType, Layer = componentType, Text = componentType,
     Button = componentType, InputField = componentType,
     AlignMode = {}, Hook = {}, GroupBoxHeaderAlignMode = {},
-    TextContentVisibilityMode = {}, InputFieldFilterMode = {},
+    TextContentVisibilityMode = {}, InputFieldFilterMode = {}, InputFieldActionResult = {},
 }
 id = { Font = {}, StyleSheet = {}, Component = {} }
 
@@ -154,6 +168,10 @@ eq(#sent, 1, "placed offer sent")
 eq(sent[1].url, "https://api.test/api/report", "report url")
 eq(sent[1].headers.Authorization, "Bearer tok123", "auth header")
 check(sent[1].body:find('"type":"PS"') and sent[1].body:find('"slot":"2"'), "PS with slot: " .. sent[1].body)
+
+eq(#gets, 1, "placing an offer runs a price check")
+eq(gets[1].url, "https://api.test/api/quote?item=Tumeken%27s%20light", "quote url is encoded")
+eq(gets[1].headers.Authorization, "Bearer tok123", "quote auth header")
 
 offers[2] = offer(1, 2100000000, 1, 1, 2150000000)
 fire("GrandExchangeOfferUpdated", { slot = 2, listing = offers[2] })
@@ -202,6 +220,31 @@ local queuedLines = 0
 for _ in (db.reportQueue or ""):gmatch("[^\n]+") do queuedLines = queuedLines + 1 end
 eq(queuedLines, 1, "paused: nothing new queued")
 check(db["slots:Zeph"].s6 ~= nil, "paused: slot still remembered")
+
+---------------------------------------------------------------------------
+-- quotes.lua formatting
+---------------------------------------------------------------------------
+local Quotes = require("quotes")
+local lines = Quotes.Format(getResponse.data, "tume")
+eq(lines[1], "Tumeken's light  [A 81/100]", "quote title")
+eq(lines[2], "Buy 2,050,000,000  >  Sell 2,100,000,000", "quote prices (flip direction)")
+eq(lines[3], "Margin after tax 8,000,000  ROI 0.39%", "quote margin")
+eq(lines[4], "Volume 3/hr  40/24h", "quote volume")
+eq(lines[5], "Recent move -1.2%", "quote move")
+lines = Quotes.Format('{"item":"Rare thing","complete":false}', "rare")
+eq(lines[2], "No complete live price right now.", "incomplete quote")
+eq(Quotes.FormatGp(-1234567), "-1,234,567", "negative gp")
+eq(Quotes.FormatGp(999), "999", "small gp")
+
+-- Errors and the "one at a time, newest wins" queue.
+local shown
+local q = Quotes.new("https://api.test", function() return "tok" end, function(l) shown = l end)
+getResponse = { code = 404, data = '{"error":"No item matches \'zzz\'"}' }
+q:Lookup("zzz")
+eq(shown[1], "No item matches 'zzz'", "quote 404 shows server error")
+q = Quotes.new("https://api.test", function() return "" end, function(l) shown = l end)
+q:Lookup("abc")
+eq(shown[1], "Paste your $link token to check prices.", "quote without token")
 
 print(string.format("%d passed, %d failed", passed, failures))
 os.exit(failures == 0 and 0 or 1)

@@ -83,4 +83,29 @@ function json.ReadString(body, field)
     return nil -- unterminated string
 end
 
+-- Read one number field (e.g. "margin") out of a JSON response.
+-- Returns nil when the field is missing or null.
+--
+-- Like ReadString, this matches the first field with that name, so it is only
+-- used for names that appear once in a response (the quote fields below are
+-- all top-level and unique; nested lists there only use "price" and "at").
+function json.ReadNumber(body, field)
+    if type(body) ~= "string" then
+        return nil
+    end
+    local raw = body:match('"' .. field .. '"%s*:%s*(-?[%d%.eE+-]+)')
+    return raw and tonumber(raw)
+end
+
+-- Read one true/false field. Returns nil when missing.
+function json.ReadBool(body, field)
+    if type(body) ~= "string" then
+        return nil
+    end
+    local raw = body:match('"' .. field .. '"%s*:%s*(%a+)')
+    if raw == "true" then return true end
+    if raw == "false" then return false end
+    return nil
+end
+
 return json

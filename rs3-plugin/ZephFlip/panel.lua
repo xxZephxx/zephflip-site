@@ -9,11 +9,12 @@ local Panel = {}
 Panel.__index = Panel
 
 local WIDTH = 270
-local OPEN_HEIGHT = 330
+local OPEN_HEIGHT = 480
 local HEADER_HEIGHT = 30
 local ROW = 28            -- height of one row of controls
 local PAD = 8
 local MAX_ACTIVITY = 5    -- recent report lines kept on screen
+local QUOTE_HEIGHT = 112  -- room for the 5 lines of a price check
 
 local FONT = id.Font.MUSEO_SANS_15PT_REGULAR
 
@@ -48,7 +49,7 @@ local function addInput(parent, x, y, w, placeholder)
 end
 
 -- callbacks: onSaveToken(token), onAccountChanged(number),
---            onToggleAuto(), onToggleOffers(), onRetry()
+--            onToggleAuto(), onToggleOffers(), onRetry(), onPriceCheck(itemName)
 function Panel.new(callbacks)
     local self = setmetatable({}, Panel)
     self.callbacks = callbacks
@@ -80,6 +81,21 @@ function Panel.new(callbacks)
 
     self.statusText = addText(body, 0, y, innerWidth, ROW * 2, "Starting...")
     y = y + ROW * 2
+
+    -- Price check: type an item and press Check (or Enter).
+    self.priceInput = addInput(body, 0, y, innerWidth - 64, "Item name, e.g. tume light")
+    self.priceInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason, newContent)
+        if reason == ui.InputFieldActionResult.SUBMIT then
+            self.callbacks.onPriceCheck(newContent)
+        end
+    end)
+    addButton(body, innerWidth - 60, y, 60, "Check", function()
+        self.callbacks.onPriceCheck(self.priceInput.content)
+    end)
+    y = y + ROW
+    self.quoteText = addText(body, 0, y, innerWidth, QUOTE_HEIGHT,
+        "Check any item, or place a GE offer to see its price here.")
+    y = y + QUOTE_HEIGHT
 
     -- $link token: typed or pasted, then saved with the button.
     self.tokenInput = addInput(body, 0, y, innerWidth - 64, "$link token")
@@ -123,6 +139,11 @@ end
 
 function Panel:SetStatus(message)
     self.statusText.content = message
+end
+
+-- Show a price check result (a list of lines from quotes.lua).
+function Panel:SetQuote(lines)
+    self.quoteText.content = table.concat(lines, "<br>")
 end
 
 function Panel:SetToggles(autoReport, trackOffers)

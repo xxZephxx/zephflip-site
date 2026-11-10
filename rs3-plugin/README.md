@@ -21,6 +21,22 @@ the same `/api/report` endpoint the Alt1 app and dashboard use.
   delay starts at 30 s and backs off up to 5 min.
 * The plugin is read-only: it never places, edits or collects offers.
 
+### Price checks
+
+Type an item into the panel's price box and press **Check** (or Enter). When
+you place a GE offer, that item is checked automatically. The panel shows
+the same item intelligence as the Alt1 app, via `/api/quote`:
+
+```
+Tumeken's light  [A 81/100]          <- ZephScore grade
+Buy 2,050,000,000  >  Sell 2,100,000,000
+Margin after tax 8,000,000  ROI 0.39%
+Volume 3/hr  40/24h
+Recent move -1.2%
+```
+
+Short names work the same way they do in Discord (e.g. `tume light`).
+
 ## Files
 
 ```
@@ -29,6 +45,7 @@ ZephFlip/            <- the plugin folder (this is what gets zipped)
   main.lua           wiring: events, settings, per-character state
   tracker.lua        "what changed in this GE slot?" (pure logic)
   reporter.lua       HTTP queue with retry, saved in PersistentDB
+  quotes.lua         price checks (/api/quote) and their formatting
   panel.lua          the in-game window
   json.lua           tiny JSON helper (the API has no JSON library)
 tests/run.lua        offline tests against a fake client
@@ -83,7 +100,8 @@ starting point for the two plugin-specific ones:
 > https://zephflip-production.up.railway.app. It sends your own Grand
 > Exchange trades (item, buy/sell, price, quantity, GE slot) to your ZephFlip
 > account, where they are used for your flip ledger, profit tracking and
-> ZephFlip's market price evidence.
+> ZephFlip's market price evidence. It also sends the names of items you
+> price-check to fetch their live prices.
 >
 > **Data protection.** Uses your own Grand Exchange offers and your
 > character's display name. The display name is only used to save settings

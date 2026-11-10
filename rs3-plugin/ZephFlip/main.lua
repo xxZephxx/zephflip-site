@@ -7,6 +7,8 @@
 --     for exactly the quantity that filled, at the price it filled at;
 --   * (optional) a newly placed offer is reported as a Buy/Sell offer (PB/PS)
 --     in the matching slot, so ZephFlip's slot tracker follows it.
+-- It also does price checks: type any item into the panel, or just place a GE
+-- offer, and it shows ZephFlip's live prices, margin, ROI, ZephScore and volume.
 --
 -- The plugin only reads your offers. It never places, changes or collects
 -- offers, and it never acts in the game for you.
@@ -14,11 +16,13 @@
 -- Files:
 --   tracker.lua   decides what changed in a GE slot (pure logic, unit tested)
 --   reporter.lua  sends reports to the ZephFlip API with a saved retry queue
+--   quotes.lua    price checks against the ZephFlip API
 --   panel.lua     the in-game window
 --   json.lua      tiny JSON helper (the plugin API has none)
 
 local Tracker = require("tracker")
 local Reporter = require("reporter")
+local Quotes = require("quotes")
 local Panel = require("panel")
 
 -- Saved settings ---------------------------------------------------------------
@@ -42,6 +46,7 @@ local character = {
 
 local panel     -- created below
 local reporter  -- created below
+local quotes    -- created below
 
 -- Small helpers -------------------------------------------------------------
 
@@ -128,6 +133,13 @@ local function handleSlot(slot, offer)
     character.slots[key] = current
     saveSlots()
 
+    -- Placing an offer shows that item's price check automatically.
+    for _, report in ipairs(reports) do
+        if report.kind == "placed" and Plugin.HasPermission(PluginPermissions.httpAccess) then
+            quotes:Lookup(report.item)
+        end
+    end
+
     -- While paused we still remember the slot, so switching back on doesn't
     -- file everything that happened during the pause.
     if settings.autoReport and settings.token ~= "" then
@@ -197,6 +209,14 @@ function callbacks.onToggleOffers()
     panel:SetToggles(settings.autoReport, settings.trackOffers)
 end
 
+function callbacks.onPriceCheck(itemName)
+    if not Plugin.HasPermission(PluginPermissions.httpAccess) then
+        panel:SetQuote({ "Price checks need the httpAccess permission." })
+        return
+    end
+    quotes:Lookup(itemName)
+end
+
 function callbacks.onRetry()
     reporter:RetryNow()
     refreshStatus("Retrying...")
@@ -215,6 +235,11 @@ reporter = Reporter.new(
         panel:AddActivity((ok and "OK  " or "!!  ") .. message)
         refreshStatus()
     end)
+
+quotes = Quotes.new(
+    Plugin.urls.zephflip,
+    function() return settings.token end,
+    function(lines) panel:SetQuote(lines) end)
 
 if not Plugin.HasPermission(PluginPermissions.httpAccess) then
     refreshStatus("ZephFlip needs the httpAccess permission to send your trades. "
