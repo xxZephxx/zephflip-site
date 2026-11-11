@@ -71,6 +71,8 @@ package.sh           builds dist/ZephFlip-<version>.zip for mod.io
    * Mac: `~/Jagex/RuneScape-BETA/dev_plugins/ZephFlip`
 3. In game, press **Alt + `** to open the console, then run `prf`, `plist`
    and `pon ZephFlip`. Use `prl ZephFlip` to reload after editing.
+   Grant internet access (needed for price checks and reports) with
+   `ppe ZephFlip httpAccess`.
 4. In the ZephFlip panel, paste your token from `$link` in Discord and press
    **Save**. Set **ZephFlip account #** to 2 on your second character, so
    slots go in as `3.2`.

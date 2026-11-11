@@ -78,7 +78,10 @@ local function refreshStatus(message)
     end
     local who = character.name or "not logged in"
     local state
-    if settings.token == "" then
+    if not Plugin.HasPermission(PluginPermissions.httpAccess) then
+        -- Without it nothing can reach ZephFlip, so say that first.
+        state = "Allow internet access in this plugin's settings."
+    elseif settings.token == "" then
         state = "Paste your $link token below."
     elseif not settings.autoReport then
         state = "Paused - trades are not reported."
@@ -233,7 +236,7 @@ end
 
 -- Startup messages go to the developer console (Alt + `), so if the window
 -- doesn't appear we can see which step stopped and why.
-local VERSION = "0.3.1"
+local VERSION = "0.3.2"
 print("ZephFlip " .. VERSION .. ": starting")
 
 local created, panelOrError = pcall(Panel.new, callbacks)
@@ -261,10 +264,12 @@ quotes = Quotes.new(
 
 print("ZephFlip: internet permission (httpAccess) "
     .. (Plugin.HasPermission(PluginPermissions.httpAccess) and "granted" or "NOT granted"))
-if not Plugin.HasPermission(PluginPermissions.httpAccess) then
-    refreshStatus("ZephFlip needs the httpAccess permission to send your trades. "
-        .. "Allow it in the plugin settings.")
-end
+-- Internet access granted or taken away while running: update the status line.
+Event.OptionalPermissionChanged.Subscribe("zephflipPermission", function(event)
+    print("ZephFlip: " .. tostring(event.permissionName) .. " is now "
+        .. (event.enabled and "granted" or "NOT granted"))
+    refreshStatus()
+end)
 
 -- A GE slot changed (placed, partly filled, finished, collected or aborted).
 Event.GrandExchangeOfferUpdated.Subscribe("zephflipOffer", function(event)
