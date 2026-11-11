@@ -223,8 +223,13 @@ function Panel:SetToggles(autoReport, trackOffers)
     self.offersButton.label = "Track new offers in slots: " .. onOff(trackOffers)
 end
 
+-- The token itself is never shown: once one is saved the box is emptied and
+-- its placeholder says so. (A masked input can't be used: the API hides a
+-- masked field's contents from the plugin too.)
 function Panel:SetToken(token)
-    self.tokenInput.content = token or ""
+    self.tokenInput.content = ""
+    local hasToken = token ~= nil and token ~= ""
+    self.tokenInput.emptyText = hasToken and "Token saved (hidden)" or "$link token"
 end
 
 function Panel:SetAccount(number)

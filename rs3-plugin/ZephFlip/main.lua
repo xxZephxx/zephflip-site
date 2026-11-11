@@ -192,10 +192,20 @@ end
 local callbacks = {}
 
 function callbacks.onSaveToken(token)
-    settings.token = (token or ""):match("^%s*(.-)%s*$")
+    token = (token or ""):match("^%s*(.-)%s*$")
+    if token == "" then
+        -- An empty box never wipes a saved token (the box is always emptied
+        -- after saving, so pressing Save twice would otherwise log you out).
+        refreshStatus(settings.token == "" and "Paste your $link token first."
+            or "Paste a new token to replace the saved one.")
+        return
+    end
+    settings.token = token
     PersistentDB:SetString("token", settings.token)
+    -- Clear the box so the token isn't left on screen (or in screenshots).
+    panel:SetToken(settings.token)
     reporter:TokenChanged()
-    refreshStatus(settings.token == "" and "Token cleared." or "Token saved.")
+    refreshStatus("Token saved.")
 end
 
 function callbacks.onAccountChanged(number)
@@ -236,7 +246,7 @@ end
 
 -- Startup messages go to the developer console (Alt + `), so if the window
 -- doesn't appear we can see which step stopped and why.
-local VERSION = "0.3.2"
+local VERSION = "0.3.3"
 print("ZephFlip " .. VERSION .. ": starting")
 
 local created, panelOrError = pcall(Panel.new, callbacks)
