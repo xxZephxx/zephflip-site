@@ -102,7 +102,7 @@ lua5.4 rs3-plugin/tests/run.lua
 
 ## Submitting to mod.io
 
-1. Set `contactEmailAddress` in `ZephFlip/plugin.json`. Jagex recommend an
+1. `contactEmailAddress` in `ZephFlip/plugin.json` is set. Everything to paste into mod.io is in `MODIO.md`.
    address different from your mod.io login.
 2. `rs3-plugin/package.sh` builds `rs3-plugin/dist/ZephFlip-<version>.zip`.
 3. Upload it at https://mod.io/g/runescape following the docs'
