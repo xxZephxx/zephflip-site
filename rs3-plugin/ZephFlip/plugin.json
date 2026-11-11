@@ -1,0 +1,14 @@
+{
+    "name": "ZephFlip",
+    "version": "0.3.4",
+    "contactEmailAddress": "xsnewman89x@gmail.com",
+    "requiredDependencies": {},
+    "optionalDependencies": {},
+    "requiredPermissions": [],
+    "optionalPermissions": [
+        "httpAccess"
+    ],
+    "urls": {
+        "zephflip": "https://zephflip-production.up.railway.app"
+    }
+}
