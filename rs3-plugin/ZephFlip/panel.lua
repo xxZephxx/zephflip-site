@@ -109,6 +109,7 @@ function Panel.new(callbacks)
     self.collapsed = false
 
     local gameWindow = ui.Interfaces:GetComponent(id.Component.TOPLEVEL_V2__PLUGIN_BUILD_LAYER_TOP)
+    print("ZephFlip: plugin UI layer " .. (gameWindow and "found" or "NOT found"))
 
     -- The whole window, placed near the top-left of the game.
     local root = ui.Layer.new(gameWindow)

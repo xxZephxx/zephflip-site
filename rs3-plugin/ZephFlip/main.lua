@@ -231,7 +231,18 @@ end
 
 -- Start up ---------------------------------------------------------------------
 
-panel = Panel.new(callbacks)
+-- Startup messages go to the developer console (Alt + `), so if the window
+-- doesn't appear we can see which step stopped and why.
+local VERSION = "0.3.1"
+print("ZephFlip " .. VERSION .. ": starting")
+
+local created, panelOrError = pcall(Panel.new, callbacks)
+if not created then
+    print("ZephFlip: could not create the window: " .. tostring(panelOrError))
+    return
+end
+panel = panelOrError
+print("ZephFlip: window created")
 panel:SetToken(settings.token)
 panel:SetToggles(settings.autoReport, settings.trackOffers)
 
@@ -248,6 +259,8 @@ quotes = Quotes.new(
     function() return settings.token end,
     function(lines) panel:SetQuote(lines) end)
 
+print("ZephFlip: internet permission (httpAccess) "
+    .. (Plugin.HasPermission(PluginPermissions.httpAccess) and "granted" or "NOT granted"))
 if not Plugin.HasPermission(PluginPermissions.httpAccess) then
     refreshStatus("ZephFlip needs the httpAccess permission to send your trades. "
         .. "Allow it in the plugin settings.")
@@ -279,3 +292,4 @@ end)
 -- The plugin may be switched on while already in game.
 activateCharacter()
 refreshStatus()
+print("ZephFlip: ready" .. (character.name and (" - logged in as " .. character.name) or ""))
