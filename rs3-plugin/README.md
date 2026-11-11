@@ -72,7 +72,9 @@ package.sh           builds dist/ZephFlip-<version>.zip for mod.io
 3. In game, press **Alt + `** to open the console, then run `prf`, `plist`
    and `pon ZephFlip`. Use `prl ZephFlip` to reload after editing.
    Grant internet access (needed for price checks and reports) with
-   `ppe ZephFlip httpAccess`.
+   `ppe ZephFlip httpAccess`, then **reload with `prl ZephFlip`**. The
+   permission only takes effect after a reload. The console line should then
+   read `internet permission (httpAccess) granted`.
 4. In the ZephFlip panel, paste your token from `$link` in Discord and press
    **Save**. Set **ZephFlip account #** to 2 on your second character, so
    slots go in as `3.2`.
