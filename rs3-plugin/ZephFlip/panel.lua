@@ -23,8 +23,8 @@ local TITLE = 20          -- height of a section title
 local PAD = 8
 local MAX_ACTIVITY = 5    -- recent report lines kept on screen
 local MAX_LINE_CHARS = 34 -- longer report lines are cut so each stays on one line
-local QUOTE_HEIGHT = 112  -- room for the 5 lines of a price check
-local OPEN_HEIGHT = 530
+local QUOTE_HEIGHT = 124  -- room for the 6 lines of a price check
+local OPEN_HEIGHT = 542
 
 local FONT = id.Font.MUSEO_SANS_15PT_REGULAR
 

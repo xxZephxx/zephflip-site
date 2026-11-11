@@ -62,7 +62,8 @@ local function gainLoss(value, text)
 end
 
 -- Turn a /api/quote response body into display lines (with colour tags:
--- item name in white, grade in gold, margin and move in green/red).
+-- item name in white, grade in gold, margin/ROI/move in green or red).
+-- At most 6 short lines, so the result fits the panel without wrapping.
 function Quotes.Format(body, askedFor)
     local name = Theme.Tag("ink", json.ReadString(body, "item") or askedFor)
     if json.ReadBool(body, "complete") == false then
@@ -78,27 +79,35 @@ function Quotes.Format(body, askedFor)
         table.insert(lines, name)
     end
 
+    -- One value per line: real prices are rarely round, so they often show as
+    -- full numbers (2,737,162,892) and two on one line would wrap.
     -- Flip direction: buy at the instant-sell price, sell at the instant-buy price.
-    -- Short exact form (2.05b) so each line fits the panel's width.
     local buyAt = json.ReadNumber(body, "instant_sell")
     local sellAt = json.ReadNumber(body, "instant_buy")
-    table.insert(lines, "Buy " .. (buyAt and Quotes.CompactGp(buyAt) or "-")
-        .. "  >  Sell " .. (sellAt and Quotes.CompactGp(sellAt) or "-"))
+    table.insert(lines, "Buy  " .. (buyAt and Quotes.CompactGp(buyAt) or "-"))
+    table.insert(lines, "Sell " .. (sellAt and Quotes.CompactGp(sellAt) or "-"))
 
     local margin = json.ReadNumber(body, "margin")
+    table.insert(lines, "Net margin " .. gainLoss(margin, margin and Quotes.CompactGp(margin) or "-"))
+
+    -- ROI and recent move share a line; both are short percentages.
     local roi = json.ReadNumber(body, "roi")
-    table.insert(lines, "Margin after tax " .. gainLoss(margin, margin and Quotes.CompactGp(margin) or "-")
-        .. (roi and ("  ROI " .. roi .. "%") or ""))
+    local move = json.ReadNumber(body, "movement_pct")
+    local percents = {}
+    if roi ~= nil then
+        table.insert(percents, "ROI " .. gainLoss(roi, roi .. "%"))
+    end
+    if move ~= nil then
+        table.insert(percents, "Move " .. gainLoss(move, (move > 0 and "+" or "") .. move .. "%"))
+    end
+    if #percents > 0 then
+        table.insert(lines, table.concat(percents, "   "))
+    end
 
     local hourly = json.ReadNumber(body, "volume")
     local daily = json.ReadNumber(body, "volume_24h")
     if hourly or daily then
-        table.insert(lines, "Volume " .. formatGp(hourly) .. "/hr  " .. formatGp(daily) .. "/24h")
-    end
-
-    local move = json.ReadNumber(body, "movement_pct")
-    if move ~= nil then
-        table.insert(lines, "Recent move " .. gainLoss(move, (move > 0 and "+" or "") .. move .. "%"))
+        table.insert(lines, "Vol " .. formatGp(hourly) .. "/hr   " .. formatGp(daily) .. "/24h")
     end
     return lines
 end

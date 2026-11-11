@@ -246,7 +246,7 @@ end
 
 -- Startup messages go to the developer console (Alt + `), so if the window
 -- doesn't appear we can see which step stopped and why.
-local VERSION = "0.3.3"
+local VERSION = "0.3.4"
 print("ZephFlip " .. VERSION .. ": starting")
 
 local created, panelOrError = pcall(Panel.new, callbacks)

@@ -28,17 +28,19 @@ you place a GE offer, that item is checked automatically. The panel shows
 the same item intelligence as the Alt1 app, via `/api/quote`:
 
 ```
-Tumeken's light  [A 81/100]          <- ZephScore grade
-Buy 2.05b  >  Sell 2.1b
-Margin after tax 8m  ROI 0.39%
-Volume 3/hr  40/24h
-Recent move -1.2%
+Tumeken's Light  [D 28/100]          <- ZephScore grade
+Buy  2,737,162,892
+Sell 2,775,341,380
+Net margin -17,328,339               <- after tax; green up, red down
+ROI -0.63%   Move 0.0%
+Vol 1/hr   25/24h
 ```
 
 Short names work the same way they do in Discord (e.g. `tume light`).
 Prices are shown in short form only when that is still exact (2.05b, 9.412k);
-otherwise the full number is shown. Margins and moves are green when up and
-red when down.
+otherwise the full number is shown. One value per line, so even full
+billion-gp numbers fit without wrapping. Margin, ROI and move are green when
+up and red when down.
 
 ### Look
 
