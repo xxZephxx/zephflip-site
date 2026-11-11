@@ -11,7 +11,16 @@ ZephFlip
 
 ## Summary (short description)
 
-Logs your Grand Exchange trades to your ZephFlip account automatically and shows ZephFlip price checks (prices, margin after tax, ROI, ZephScore, volume) in game.
+Automatically logs your Grand Exchange trades to ZephFlip and shows live price checks (margin, ROI, ZephScore) in game.
+
+## Listing image
+
+`media/zephflip-listing-1024x576.png` (16:9, at least 512x288). It shows the
+real panel with a real price check from in-game testing.
+
+## Homepage (optional)
+
+https://zephflip.com
 
 ## Platforms
 
@@ -19,9 +28,17 @@ Windows, Mac and Linux. Leave "Source" unselected.
 
 ## Tags
 
-Grand Exchange, Merchanting, Tracking, Utility, Prices
+Required: the **httpAccess** permission tag (Jagex require a tag for every
+permission the plugin requests).
 
-(Pick whichever of these mod.io offers.)
+Then whichever of these fit: Grand Exchange, Merchanting, Tracking, Utility.
+
+## File upload (step 4)
+
+- File: `ZephFlip-0.3.4.zip`
+- Platforms: Windows, Mac, Linux (not Source)
+- Version: `0.3.4` (must match plugin.json)
+- Changelog: "First release."
 
 ---
 
@@ -150,6 +167,15 @@ are never reported twice. Plugin settings, and reports waiting to be sent, are
 stored within the plugin between sessions. The plugin takes no screenshots.
 
 ---
+
+## Private details for Jagex (case 3, not public)
+
+Because data goes to the USA, Jagex also need, privately:
+- your name
+- your country of residence (minimum)
+- an email for data-protection questions
+
+These go in the adequacy exception form below, not in the public description.
 
 ## After submitting
 
