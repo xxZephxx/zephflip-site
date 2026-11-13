@@ -178,6 +178,17 @@
   </div>
 
   <div class="card">
+    <div class="sec-title">🗑️ My reports</div>
+    <div class="faint" style="font-size:12px;margin:-4px 0 8px">Logged something by mistake? Delete it here and it leaves your stats, profit and the leaderboard. Prices can't be edited — delete the report and file it again. If a buy was matched with a sale, delete the sale first.</div>
+    <div class="row">
+      <input id="mr-q" class="grow" placeholder="search an item (optional)" autocomplete="off">
+      <button class="btn btn-ghost" id="mr-go">Search</button>
+    </div>
+    <div class="status" id="mr-status"></div>
+    <div id="my-reports" style="margin-top:8px"><div class="faint">Loading…</div></div>
+  </div>
+
+  <div class="card">
     <div class="sec-title">🎰 Your GE slots</div>
     <div class="faint" style="font-size:12px;margin:-4px 0 10px">A <b style="color:#69d391">✓ likely sold / bought</b> tag means the live market has crossed your resting offer — same signal as the Discord fill alerts.</div>
     <div id="slots"><div class="faint">Loading…</div></div>
@@ -428,6 +439,7 @@
       api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
       api("/api/alerts").then(renderAlerts).catch(function(){});
       loadSlots();
+      loadMyReports();
       api("/api/watchlist").then(function(w){ window._watchDefault=(w.default_threshold||10); renderWatchlist(w.watches||[]); }).catch(function(){});
       api("/api/scout").then(function(s){ window._scouts = s.scouts||[]; renderScoutForms(); }).catch(function(){});
       api("/api/notes").then(function(n){ $("#notepad").value = n.notes||""; }).catch(function(){});
@@ -1382,8 +1394,78 @@
       setStatus($("#r-status"), msg, j.quarantined?"":"ok");
       $("#r-item").value=""; $("#r-price").value=""; $("#r-slot").value=""; $("#r-qty").value="1"; $("#r-notes").value="";
       loadSlots();
+      MR.page = 0; loadMyReports();
     }).catch(function(e){ unbusy(); setStatus($("#r-status"), e.message, "err"); });
   };
+
+  // ---- My reports: a member deletes their own mistaken reports. Delete only —
+  // there is deliberately no price edit here (the API has no route for one).
+  var MR = { page:0, q:"" };
+  var MR_KIND = { NIB:"Bought", INB:"Bought", NIS:"Sold", INS:"Sold" };
+  function mrWhen(s){
+    var d = new Date(String(s||"").replace(" ","T")+(/Z|[+-]\d\d:?\d\d$/.test(String(s||""))?"":"Z"));
+    return isNaN(d) ? String(s||"") : d.toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+  }
+  function loadMyReports(){
+    var qs = "?page="+MR.page+(MR.q ? "&item="+encodeURIComponent(MR.q) : "");
+    api("/api/my-reports"+qs).then(renderMyReports).catch(function(e){
+      $("#my-reports").innerHTML = '<div class="faint">'+esc(e.message)+'</div>';
+    });
+  }
+  function renderMyReports(d){
+    var el = $("#my-reports"), list = d.reports||[];
+    if(!list.length){
+      el.innerHTML = '<div class="faint">'+(MR.q ? 'No reports found for "'+esc(MR.q)+'".' : "You have no reports yet.")+'</div>';
+      return;
+    }
+    // Two-line rows with the button always in view — a table pushed Delete off
+    // the right edge on a phone.
+    var rows = list.map(function(r){
+      var kind = MR_KIND[r.type] || r.type;
+      var profit = r.profit!=null ? ' <span class="'+(r.profit>=0?"profit":"loss")+'">'+(r.profit>=0?"+":"")+gpShort(r.profit)+'</span>' : '';
+      var label = kind+" "+gp(r.quantity)+" × "+r.item+" @ "+gpShort(r.price);
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div><b>'+esc(kind)+'</b> '+esc(r.item)+' <span class="faint num" style="font-size:11px">#'+r.id+'</span></div>'+
+          '<div class="faint" style="font-size:12px"><span class="num">'+gp(r.quantity)+' × '+gpShort(r.price)+'</span>'+profit+
+            ' · '+esc(mrWhen(r.at))+(r.notes ? ' · '+esc(r.notes) : '')+'</div>'+
+        '</div>'+
+        '<button class="btn-x mr-del" data-id="'+r.id+'" data-label="'+esc(label)+'" title="Delete this report" style="flex:none">🗑️ Delete</button>'+
+      '</div>';
+    }).join("");
+    var pages = Math.max(1, Math.ceil((d.total||0)/(d.page_size||20)));
+    var nav = pages>1 ? '<div class="row" style="margin-top:8px;align-items:center;gap:8px">'+
+      '<button class="btn btn-ghost" id="mr-prev"'+(MR.page<=0?" disabled":"")+'>‹ Newer</button>'+
+      '<span class="faint" style="font-size:12px">Page '+(MR.page+1)+' of '+pages+' · '+d.total+' reports</span>'+
+      '<button class="btn btn-ghost" id="mr-next"'+(MR.page>=pages-1?" disabled":"")+'>Older ›</button></div>' : '';
+    el.innerHTML = rows+nav;
+    if($("#mr-prev")) $("#mr-prev").onclick = function(){ if(MR.page>0){ MR.page--; loadMyReports(); } };
+    if($("#mr-next")) $("#mr-next").onclick = function(){ if(MR.page<pages-1){ MR.page++; loadMyReports(); } };
+    el.querySelectorAll(".mr-del").forEach(function(b){
+      b.onclick = function(){
+        var label = b.getAttribute("data-label");
+        if(!confirm("Delete this report?\n\n"+label+"\n\nIt will be removed from your stats, profit and the leaderboard. This can't be undone.")) return;
+        b.disabled = true;
+        api("/api/my-reports",{method:"DELETE", body:{id:Number(b.getAttribute("data-id"))}})
+          .then(function(){
+            setStatus($("#mr-status"), "🗑️ Deleted "+label+".", "ok");
+            loadMyReports();
+            api("/api/rank").then(renderRank).catch(function(){});
+            api("/api/journal?limit=25").then(function(j){ renderJournal(j.flips||[]); }).catch(function(){});
+            api("/api/profit-series?days=30").then(function(p){ renderProfitChart(p.series||[]); }).catch(function(){});
+            api("/api/portfolio").then(renderPortfolio).catch(function(){});
+          })
+          .catch(function(e){
+            b.disabled = false;
+            var msg = /sale/i.test(e.message||"")
+              ? "That buy is matched with a sale — delete the sale first, then the buy."
+              : e.message;
+            setStatus($("#mr-status"), msg, "err");
+          });
+      };
+    });
+  }
+  $("#mr-go").onclick = function(){ MR.q = $("#mr-q").value.trim(); MR.page = 0; loadMyReports(); };
 
   var _notesTimer = null;
   $("#notepad").addEventListener("input", function(){
@@ -1406,6 +1488,7 @@
     });
   }
   enterSubmits(["#w-item"], "#w-add");
+  enterSubmits(["#mr-q"], "#mr-go");
   enterSubmits(["#a-name", "#a-cash"], "#a-add");
   enterSubmits(["#r-item", "#r-notes", "#r-price", "#r-qty", "#r-slot"], "#r-submit");
 
