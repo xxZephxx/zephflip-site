@@ -122,13 +122,14 @@ function Tracker.Diff(prev, cur)
     return reports
 end
 
--- The slot label the ZephFlip API expects: "3" on the first account,
--- "3.2" for slot 3 on the second account.
+-- The slot label ZephFlip shows members, account first: "3" on the first
+-- account, "2.3" for slot 3 on the second. Display only: reports send the
+-- account and slot as separate numbers (see main.lua).
 function Tracker.SlotLabel(slot, accountNumber)
     if accountNumber == nil or accountNumber <= 1 then
         return tostring(slot)
     end
-    return tostring(slot) .. "." .. tostring(accountNumber)
+    return tostring(accountNumber) .. "." .. tostring(slot)
 end
 
 return Tracker
