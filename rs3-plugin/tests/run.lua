@@ -77,7 +77,7 @@ eq(#r, 2, "instant fill: placed + filled"); eq(r[2].quantity, 5, "instant fill q
 eq(#T.Diff(snap(T.SELL, 100, 5, 5, 500), empty), 0, "collect reports nothing")
 -- No change: nothing.
 eq(#T.Diff(snap(T.BUY, 100, 10, 4, 0), snap(T.BUY, 100, 10, 4, 0)), 0, "no change")
-eq(T.SlotLabel(3, 1), "3", "slot label acc 1"); eq(T.SlotLabel(3, 2), "3.2", "slot label acc 2")
+eq(T.SlotLabel(3, 1), "3", "slot label acc 1"); eq(T.SlotLabel(3, 2), "2.3", "slot label acc 2 is account first")
 
 ---------------------------------------------------------------------------
 -- main.lua against a fake client
@@ -169,7 +169,8 @@ ticks(1)
 eq(#sent, 1, "placed offer sent")
 eq(sent[1].url, "https://api.test/api/report", "report url")
 eq(sent[1].headers.Authorization, "Bearer tok123", "auth header")
-check(sent[1].body:find('"type":"PS"') and sent[1].body:find('"slot":"2"'), "PS with slot: " .. sent[1].body)
+check(sent[1].body:find('"type":"PS"') and sent[1].body:find('"slot":2[,}]') and sent[1].body:find('"account":1[,}]'),
+    "PS sends account and slot as numbers: " .. sent[1].body)
 
 eq(#gets, 1, "placing an offer runs a price check")
 eq(gets[1].url, "https://api.test/api/quote?item=Tumeken%27s%20light", "quote url is encoded")

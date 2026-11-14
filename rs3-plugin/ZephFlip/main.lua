@@ -124,8 +124,11 @@ local function queueReport(report, slot)
     -- or "Sell offer s2 1 Tumeken's light 2.1b".
     local verb = ({ NIB = "Bought", NIS = "Sold", PB = "Buy offer", PS = "Sell offer" })[report.type]
     if report.kind == "placed" then
-        fields.slot = Tracker.SlotLabel(slot, character.account)
-        verb = verb .. " s" .. fields.slot
+        -- Account and GE slot as separate numbers, so the API never has to
+        -- guess which half of a "2.3"-style label is which.
+        fields.slot = slot
+        fields.account = character.account or 1
+        verb = verb .. " s" .. Tracker.SlotLabel(slot, character.account)
     end
     local label = verb .. " " .. Quotes.CompactGp(report.quantity) .. " "
         .. shortItemName(report.item) .. " " .. Quotes.CompactGp(report.price)
@@ -246,7 +249,7 @@ end
 
 -- Startup messages go to the developer console (Alt + `), so if the window
 -- doesn't appear we can see which step stopped and why.
-local VERSION = "0.3.4"
+local VERSION = "0.3.5"
 print("ZephFlip " .. VERSION .. ": starting")
 
 local created, panelOrError = pcall(Panel.new, callbacks)

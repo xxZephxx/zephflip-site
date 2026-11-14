@@ -79,7 +79,7 @@ package.sh           builds dist/ZephFlip-<version>.zip for mod.io
    read `internet permission (httpAccess) granted`.
 4. In the ZephFlip panel, paste your token from `$link` in Discord and press
    **Save**. Set **ZephFlip account #** to 2 on your second character, so
-   slots go in as `3.2`.
+   slots go in as `2.3` (account 2, slot 3).
 
 **The beta world has no Grand Exchange.** In the beta you can check that the
 panel loads, the token saves and the API is reachable. Real automatic reporting
