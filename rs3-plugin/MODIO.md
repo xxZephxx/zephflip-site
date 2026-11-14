@@ -35,9 +35,9 @@ Then whichever of these fit: Grand Exchange, Merchanting, Tracking, Utility.
 
 ## File upload (step 4)
 
-- File: `ZephFlip-0.3.4.zip`
+- File: `ZephFlip-0.3.5.zip`
 - Platforms: Windows, Mac, Linux (not Source)
-- Version: `0.3.4` (must match plugin.json)
+- Version: `0.3.5` (must match plugin.json)
 - Changelog: "First release."
 
 ---
